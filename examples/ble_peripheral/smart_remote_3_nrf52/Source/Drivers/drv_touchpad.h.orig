@@ -96,11 +96,6 @@ ret_code_t drv_touchpad_schedule_read(drv_touchpad_data_t *p_data);
 
 uint16_t drv_touchpad_dpad_ok_clicked(void) ;
 
-
-uint16_t drv_touchpad_dpad_ok_clicked(void) ;
-
-uint16_t drv_touchpad_dpad_ok_released(void) ;
-
 #endif /* __DRV_TOUCHPAD_H__ */
 
 /** @} */

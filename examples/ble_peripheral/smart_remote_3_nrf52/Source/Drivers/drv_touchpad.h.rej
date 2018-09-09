@@ -1,0 +1,11 @@
+--- Source/Drivers/drv_touchpad.h
++++ Source/Drivers/drv_touchpad.h
+@@ -72,7 +72,7 @@ typedef void (*drv_touchpad_read_handler_t)(ret_code_t status, drv_touchpad_data
+  * @retval NRF_SUCCESS
+  * @retval NRF_ERROR_INTERNAL Bus error.
+  */
+-ret_code_t drv_touchpad_init(drv_touchpad_read_handler_t read_handler);
++ret_code_t drv_touchpad_init(drv_touchpad_read_handler_t read_handler, drv_touchpad_data_t *p_u_data);
+ 
+ /**@brief Enable touchpad to manage power consumption.
+  *

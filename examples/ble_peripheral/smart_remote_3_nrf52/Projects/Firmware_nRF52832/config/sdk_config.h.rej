@@ -1,0 +1,11 @@
+--- Projects/Firmware_nRF52832/config/sdk_config.h
++++ Projects/Firmware_nRF52832/config/sdk_config.h
+@@ -295,7 +295,7 @@
+ #endif
+ // <o> GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS - Number of lower power input pins 
+ #ifndef GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS
+-#define GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS 9
++#define GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS 16
+ #endif
+ 
+ // <o> GPIOTE_CONFIG_IRQ_PRIORITY  - Interrupt priority

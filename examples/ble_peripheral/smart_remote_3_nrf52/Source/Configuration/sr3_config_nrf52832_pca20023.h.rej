@@ -1,0 +1,399 @@
+--- Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -641,7 +641,7 @@
+ // <o> Gyroscope Mode Toggle Key ID <0x00-0xFF>
+ // <i> Select the key that toggles the gyroscope mode.
+ /**@brief Gyroscope Mode Toggle Key ID <0x00-0xFF> */
+-#define CONFIG_GYRO_MODE_KEY_ID 0x26
++#define CONFIG_GYRO_MODE_KEY_ID 0xB0
+ 
+ // <o> Left Click Key ID <0x00-0xFF>
+ // <i> Select the key that acts as the left mouse button in the gyroscope mode.
+@@ -1166,15 +1166,18 @@
+ // </h>
+ // </e>
+ 
++// Use NFC pins as GPIOs
++#define CONFIG_NFCT_PINS_AS_GPIOS 1
++
+ // <e> Enable NFC Tag
+ // <i> Enables NFC Tag subsystem.
+ /**@brief Enable NFC Tag */
+-#define CONFIG_NFC_ENABLED 1
++#define CONFIG_NFC_ENABLED 0
+ 
+ // <e> Provide tap-to-pair tag
+ // <i> If this option is enabled, the tag will present an NFC pairing message when the device is bondable.
+ /**@brief NFC: Provide tap-to-pair tag */
+-#define CONFIG_NFC_PAIRING_TAG 1
++#define CONFIG_NFC_PAIRING_TAG 0
+ 
+ // <q> Use full pairing message that supports both Bluetooth Classic and LE.
+ /**@brief NFC: Use full pairing message that supports both Bluetooth Classic and LE. */
+@@ -1184,12 +1187,12 @@
+ // <q> Provide text tag
+ // <i> If this option is enabled, the tag will present textual information about the firmware.
+ /**@brief NFC: Provide text tag */
+-#define CONFIG_NFC_TEXT_TAG 1
++#define CONFIG_NFC_TEXT_TAG 0
+ 
+ // <q> Use NFC as a Wakeup Source
+ // <i> Enables system wakeup on NFC tag read attempt.
+ /**@brief NFC: Use NFC as a Wakeup Source */
+-#define CONFIG_NFC_WAKEUP_SOURCE 1
++#define CONFIG_NFC_WAKEUP_SOURCE 0
+ 
+ // <h> Logging Options
+ // <i> This section configures module-specific logging options.
+@@ -1208,20 +1211,27 @@
+ // <e> Enable Touchpad Support
+ // <i> Enable the touchpad subsystem.
+ /**@brief Enable Touchpad Support */
+-#define CONFIG_TOUCHPAD_ENABLED 0
++#define CONFIG_TOUCHPAD_ENABLED 1
++
++#if (CONFIG_TOUCHPAD_ENABLED)
++// CONFIG_TOUCHPAD_DRV == 1 Synaptic
++// CONFIG_TOUCHPAD_DRV == 2 Micron MTCH6102
++#define CONFIG_TOUCHPAD_DRV 2
++#endif
++
+ 
+ // <o> TWI Bus
+ // <i> Select the TWI Bus that is used to communicate with the touchpad.
+ //  <0=>Primary
+ //  <1=>Secondary
+ /**@brief Touchpad TWI Bus */
+-#define CONFIG_TOUCHPAD_TWI_BUS 0
++#define CONFIG_TOUCHPAD_TWI_BUS 1
+ 
+ // <o> Touchpad Polling Interval [ms] <1-100>
+ // <i> Configure the touchpad polling interval.
+ // <i> Note: Polling interval shorter than 5 ms might cause congestion on the I2C bus if other modules using the same bus are enabled.
+ /**@brief Touchpad Polling Interval [ms] <1-100> */
+-#define CONFIG_TOUCHPAD_POLL_INTERVAL 15
++#define CONFIG_TOUCHPAD_POLL_INTERVAL 40
+ 
+ // <h> Logging Options
+ // <i> This section configures module-specific logging options.
+@@ -1501,12 +1511,12 @@
+ // <s.20> Device Name
+ // <i> UTF-8 string representing the name of the device.
+ /**@brief Device Name */
+-#define CONFIG_DEVICE_NAME "Smart Remote 3"
++#define CONFIG_DEVICE_NAME "Newt"
+ 
+ // <s> Manufacturer Name
+ // <i> UTF-8 string representing the name of the manufacturer of the device.
+ /**@brief Manufacturer Name */
+-#define CONFIG_MANUFACTURER_NAME "Nordic Semiconductor"
++#define CONFIG_MANUFACTURER_NAME "FB"
+ 
+ // <s> Firmware Revision
+ // <i> UTF-8 string representing the firmware revision for the firmware within the device.
+@@ -1516,7 +1526,7 @@
+ // <s> Hardware Revision
+ // <i> UTF-8 string representing the hardware revision for the hardware within the device.
+ /**@brief Hardware Revision */
+-#define CONFIG_HARDWARE_REVISION "PCA20023"
++#define CONFIG_HARDWARE_REVISION "EVT1"
+ 
+ // <s> Serial Number
+ // <i> UTF-8 string representing the serial number of the particular instance of the device.
+@@ -1561,7 +1571,7 @@
+ // <o> Advertising Time-out [s] <1-255>
+ // <i> Set the time after which the remote is automatically put into deep sleep mode if it cannot connect to the host.
+ /**@brief Advertising Time-out [s] <1-255> */
+-#define CONFIG_ADV_TIMEOUT 5
++#define CONFIG_ADV_TIMEOUT 60
+ 
+ // <o> Advertising Interval [ms] <20-10240>
+ // <i> Configure the interval between advertising packets in the Advertising mode.
+@@ -1695,7 +1705,7 @@
+ // <q> Allow Legacy Pairing
+ // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
+ /**@brief Allow Legacy Pairing */
+-#define CONFIG_SEC_LEGACY_PAIRING 1
++#define CONFIG_SEC_LEGACY_PAIRING 0
+ 
+ // <q> Allow LESC Pairing
+ // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
+@@ -1924,7 +1934,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 0 Pin */
+-#define CONFIG_IO_KEY_COL_0 0x0C
++#define CONFIG_IO_KEY_COL_0 29//16
+ 
+ // <o> Column 1 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1933,7 +1943,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 1 Pin */
+-#define CONFIG_IO_KEY_COL_1 0x1C
++#define CONFIG_IO_KEY_COL_1 0xFFFFFFFF
+ 
+ // <o> Column 2 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1942,7 +1952,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 2 Pin */
+-#define CONFIG_IO_KEY_COL_2 0x08
++#define CONFIG_IO_KEY_COL_2 0xFFFFFFFF
+ 
+ // <o> Column 3 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1951,7 +1961,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 3 Pin */
+-#define CONFIG_IO_KEY_COL_3 0x0B
++#define CONFIG_IO_KEY_COL_3 0xFFFFFFFF
+ 
+ // <o> Column 4 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1960,7 +1970,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 4 Pin */
+-#define CONFIG_IO_KEY_COL_4 0x03
++#define CONFIG_IO_KEY_COL_4 0xFFFFFFFF
+ 
+ // <o> Column 5 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1969,7 +1979,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 5 Pin */
+-#define CONFIG_IO_KEY_COL_5 0x1B
++#define CONFIG_IO_KEY_COL_5 0xFFFFFFFF
+ 
+ // <o> Column 6 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1978,7 +1988,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 6 Pin */
+-#define CONFIG_IO_KEY_COL_6 0x14
++#define CONFIG_IO_KEY_COL_6 0xFFFFFFFF
+ 
+ // <o> Column 7 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1987,7 +1997,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 7 Pin */
+-#define CONFIG_IO_KEY_COL_7 0x19
++#define CONFIG_IO_KEY_COL_7 0xFFFFFFFF
+ 
+ // <o> Row 0 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1996,7 +2006,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 0 Pin */
+-#define CONFIG_IO_KEY_ROW_0 0x10
++#define CONFIG_IO_KEY_ROW_0 3
+ 
+ // <o> Row 1 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2005,7 +2015,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 1 Pin */
+-#define CONFIG_IO_KEY_ROW_1 0x11
++#define CONFIG_IO_KEY_ROW_1 8
+ 
+ // <o> Row 2 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2014,7 +2024,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 2 Pin */
+-#define CONFIG_IO_KEY_ROW_2 0x12
++#define CONFIG_IO_KEY_ROW_2 11
+ 
+ // <o> Row 3 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2023,7 +2033,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 3 Pin */
+-#define CONFIG_IO_KEY_ROW_3 0x1D
++#define CONFIG_IO_KEY_ROW_3 12
+ 
+ // <o> Row 4 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2032,7 +2042,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 4 Pin */
+-#define CONFIG_IO_KEY_ROW_4 0x13
++#define CONFIG_IO_KEY_ROW_4 16
+ 
+ // <o> Row 5 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2041,7 +2051,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 5 Pin */
+-#define CONFIG_IO_KEY_ROW_5 0xFFFFFFFF
++#define CONFIG_IO_KEY_ROW_5 17
+ 
+ // <o> Row 6 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2050,7 +2060,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 6 Pin */
+-#define CONFIG_IO_KEY_ROW_6 0xFFFFFFFF
++#define CONFIG_IO_KEY_ROW_6 18
+ 
+ // <o> Row 7 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2058,8 +2068,14 @@
+ //  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+-/**@brief Matrix Keyboard: Row 7 Pin */
+-#define CONFIG_IO_KEY_ROW_7 0xFFFFFFFF
++/**@brief Matrix Keyboard: Row Pin */
++#define CONFIG_IO_KEY_ROW_7 19
++
++#define CONFIG_IO_KEY_ROW_8 20
++#define CONFIG_IO_KEY_ROW_9 25
++#define CONFIG_IO_KEY_ROW_10 27
++#define CONFIG_IO_KEY_ROW_11 28
++//#define CONFIG_IO_KEY_ROW_12 4
+ // </h>
+ 
+ // <h> LEDs
+@@ -2328,7 +2344,7 @@
+ // <o> Event Pool size <4-254>
+ // <i> Specify how many events can be simultaneously queued in the Event Bus.
+ /**@brief Event Pool size <4-254> */
+-#define CONFIG_EVENT_POOL_SIZE 8
++#define CONFIG_EVENT_POOL_SIZE 16
+ 
+ // <q> Force Event Bus Error Checking
+ // <i> By default, errors that appear during non-essential event handling are ignored.
+--- Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -1215,7 +1215,7 @@
+ 
+ #if (CONFIG_TOUCHPAD_ENABLED)
+ // CONFIG_TOUCHPAD_DRV == 1 Synaptic
+-// CONFIG_TOUCHPAD_DRV == 2 Micron MTCH6102
++// CONFIG_TOUCHPAD_DRV == 2 Microchip MTCH6102
+ #define CONFIG_TOUCHPAD_DRV 2
+ #endif
+ 
+--- Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -778,6 +778,8 @@
+ // <i> Select the key that functions as the equivalent of the Google Chrome voice search shortcut (Ctrl+Shift+.).
+ /**@brief Keyboard: Google Chrome Voice Search Shortcut Key ID <0x00-0xFF> */
+ #define CONFIG_GOOGLE_VOICE_SHORTCUT_KEY_ID 0x23
++
++
+ // </e>
+ // </h>
+ 
+@@ -2075,7 +2077,7 @@
+ #define CONFIG_IO_KEY_ROW_9 25
+ #define CONFIG_IO_KEY_ROW_10 27
+ #define CONFIG_IO_KEY_ROW_11 28
+-//#define CONFIG_IO_KEY_ROW_12 4
++#define CONFIG_IO_KEY_ROW_12 4
+ // </h>
+ 
+ // <h> LEDs
+@@ -2318,7 +2320,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Buzzer Control Pin */
+-#define CONFIG_IO_BUZZER 0x04
++#define CONFIG_IO_BUZZER 0xFFFFFFFF
+ // </h>
+ 
+ // <h> Advanced Options
+--- Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -762,7 +762,7 @@
+ // <o> Delete Bonds Key ID <0x00-0xFF>
+ // <i> Select the key that removes bonds if it is held during firmware boot.
+ /**@brief Keyboard: Delete Bonds Key ID <0x00-0xFF> */
+-#define CONFIG_KBD_DELETE_BONDS_KEY_ID 0x26
++#define CONFIG_KBD_DELETE_BONDS_KEY_ID 0x00 // Top key on NEWT DEV board
+ 
+ // <o> Android TV voice command Key ID <0x00-0xFF>
+ // <i> Select the key that triggers transmission of Android TV Voice command when ATVV Service is enabled in Bluetooth options.
+@@ -777,7 +777,7 @@
+ // <o> Google Chrome Voice Search Shortcut Key ID <0x00-0xFF>
+ // <i> Select the key that functions as the equivalent of the Google Chrome voice search shortcut (Ctrl+Shift+.).
+ /**@brief Keyboard: Google Chrome Voice Search Shortcut Key ID <0x00-0xFF> */
+-#define CONFIG_GOOGLE_VOICE_SHORTCUT_KEY_ID 0x23
++#define CONFIG_GOOGLE_VOICE_SHORTCUT_KEY_ID 0x23  //0xC0
+ 
+ 
+ // </e>
+@@ -1295,7 +1295,7 @@
+ // <o> Watchdog Time-out [s] <1-300>
+ // <i> Set the watchdog time-out.
+ /**@brief Watchdog Time-out [s] <1-300> */
+-#define CONFIG_WATCHDOG_TIMEOUT 3
++#define CONFIG_WATCHDOG_TIMEOUT 20
+ // </e>
+ 
+ // <h> Logging and CLI options
+@@ -1627,7 +1627,7 @@
+ // <o> First Connection Parameter Update Delay [ms] <10-30000>
+ // <i> Set the time between establishing the connection and the first Connection Parameter Update request.
+ /**@brief First Connection Parameter Update Delay [ms] <10-30000> */
+-#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 20
++#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 10
+ 
+ // <o> Next Connection Parameter Update Delay [s] <1-300>
+ // <i> Set the time between subsequent Connection Parameter Update requests.
+@@ -1707,7 +1707,7 @@
+ // <q> Allow Legacy Pairing
+ // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
+ /**@brief Allow Legacy Pairing */
+-#define CONFIG_SEC_LEGACY_PAIRING 0
++#define CONFIG_SEC_LEGACY_PAIRING 1
+ 
+ // <q> Allow LESC Pairing
+ // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
+--- Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -818,7 +818,7 @@
+ // <e> Enable LED Support
+ // <i> Enable the LED signaling subsystem.
+ /**@brief Enable LED Support */
+-#define CONFIG_LED_ENABLED 0
++#define CONFIG_LED_ENABLED 1
+ 
+ // <o> LED Flip Interval [ms] <10-1000>
+ // <i> Time between each on/off switching of the LED.
+@@ -904,7 +904,7 @@
+ // <i> Specify how many times the LED will blink.
+ // <i> If set to 0, the LED will blink until cleared by another event.
+ /**@brief LED: Signal Connection Establishment - Number of LED Blinks <0-127> */
+-#define CONFIG_LED_CONNECTION_FLASHES 1
++#define CONFIG_LED_CONNECTION_FLASHES 2
+ 
+ // <o.0> Use LED 1
+ // <o.1> Use LED 2
+--- Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -1713,7 +1719,7 @@
+ // <q> Allow Legacy Pairing
+ // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
+ /**@brief Allow Legacy Pairing */
+-#define CONFIG_SEC_LEGACY_PAIRING 1
++#define CONFIG_SEC_LEGACY_PAIRING 0
+ 
+ // <q> Allow LESC Pairing
+ // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.

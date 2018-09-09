@@ -1,0 +1,18 @@
+--- Source/Bootloader/sr3_bootloader.c
++++ Source/Bootloader/sr3_bootloader.c
+@@ -48,6 +48,7 @@
+ #include "nrf_log_backend_rtt.h"
+ #include "nrf_log_ctrl.h"
+ #include "nrf_wdt.h"
++#include "nrf_gpio.h"
+ 
+ #include "app_timer.h"
+ #include "drv_board.h"
+@@ -59,7 +60,6 @@
+ #include "nrf_log.h"
+ NRF_LOG_MODULE_REGISTER();
+ 
+-
+ /**@brief The interval at which inactivity timer is being triggered.
+  * @note Must be often enough to make sure watchdog is feed properly timely.
+  */

@@ -7,7 +7,6 @@
 #include "nrf_atomic.h"
 #include "nrf_assert.h"
 #include "nrf_gpio.h"
-#include "nrf_delay.h"
 #include "app_debug.h"
 #include "app_error.h"
 #include "app_gpiote.h"
@@ -42,23 +41,13 @@ NRF_LOG_MODULE_REGISTER();
 #define TOUCHPAD_MODE_REG        0x05 //!< Device mode register.
 #define TOUCHPAD_TOUCH_DATA_BASE 0x10 //!< Touch RAM memory map base adr
 
-#if NEWT_DEV_BOARD
 #define TOUCHPAD_MAX_X           576
+#define TOUCHPAD_MAX_Y           384
+
 #define TOUCHPAD_LOW_TH_X        ( TOUCHPAD_MAX_X / 4)
 #define TOUCHPAD_HIGH_TH_X       ( (3*TOUCHPAD_MAX_X) / 4)
-
-#define TOUCHPAD_MAX_Y           384
 #define TOUCHPAD_LOW_TH_Y        ( TOUCHPAD_MAX_Y / 6)
 #define TOUCHPAD_HIGH_TH_Y       ( (4*TOUCHPAD_MAX_Y) / 6)
-#else
-#define TOUCHPAD_MAX_X           384
-#define TOUCHPAD_LOW_TH_X        ( (2*TOUCHPAD_MAX_X) / 6)
-#define TOUCHPAD_HIGH_TH_X       ( (4*TOUCHPAD_MAX_X) / 6)
-
-#define TOUCHPAD_MAX_Y           384
-#define TOUCHPAD_LOW_TH_Y        ( (2*TOUCHPAD_MAX_Y) / 6)
-#define TOUCHPAD_HIGH_TH_Y       ( (4*TOUCHPAD_MAX_Y) / 6)
-#endif
 
 //#define TOUCHPAD_PRODUCT_ID    0xA2 //!< Address of the product ID string.
 
@@ -84,7 +73,6 @@ static uint8_t m_buffer[6];
 static int16_t prev_touch_x;
 static int16_t prev_touch_y;
 static uint8_t touch_readings;
-static uint16_t prev_key_clicked;
 
 static drv_touchpad_data_t *p_user_data;
 
@@ -100,13 +88,8 @@ static const nrf_twi_mngr_transfer_t m_touchpad_read_transfers[] = {
 NRF_TWI_MNGR_WRITE (DEVICE_ADDRESS, &m_touch_data_base_reg, 1, NRF_TWI_MNGR_NO_STOP),
 NRF_TWI_MNGR_READ (DEVICE_ADDRESS, &m_buffer[0], 6, 0), };
 
-#if NEWT_DEV_BOARD
 static uint8_t m_touch_layout_conf[] = { 0x20, // Reg 0x20
         0x9, 0x6, 0x6, 0x4F, 0x3F }; //
-#else
-static uint8_t m_touch_layout_conf[] = { 0x20, // Reg 0x20
-        0x6, 0x6, 0x6, 0x43, 0x43 }; //
-#endif
 
 static uint8_t m_touch_gesture_conf[] = { 0x37, //Reg 0x37
         0x40, 0x40, 0x19, 0x19, 0x40, 0x32, 0x00, 0x0C, 0x20, 0x04, 0x2D, 0x2D };
@@ -204,7 +187,7 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
 
         if (m_buffer[4] == 0x10) {
             NRF_LOG_INFO("***IGOR* Gesture Single click");
-            //p_data->tap = true;
+            p_data->tap = true;
         } else if (m_buffer[4] == 0x31) { //True Down
             NRF_LOG_INFO("***IGOR* Gesture Left s=%u", swipe_speed);
             p_data->x = -swipe_speed;
@@ -281,19 +264,14 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
     }
 
     if (m_buffer[0] & 0x01) { // Touch
-        int16_t x = (m_buffer[1] << 4) | ((m_buffer[3] & 0xF0) >> 4);
-        int16_t y = (m_buffer[2] << 4) |  (m_buffer[3] & 0x0F);
+        int16_t x = (m_buffer[1] << 4) | (m_buffer[3] >> 4);
+        int16_t y = (m_buffer[2] << 4) | ((m_buffer[3] & 0xF0) >> 4);
 
         touch_readings++;
 
         if (touch_readings > 4) {
-#if NEWT_DEV_BOARD
             p_data->y = (x - prev_touch_x) / 5;
             p_data->x = (prev_touch_y - y) / 3;
-#else
-            p_data->y = (prev_touch_x - x) / 3;
-            p_data->x = (y - prev_touch_y) / 3;
-#endif
         }
         else {
             p_data->y = 0;
@@ -351,8 +329,6 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
         NRF_LOG_INFO("****IGOR* Large activation");
     }
 
-    NRF_GPIO->OUTSET = (1ul << 2);
-
     nrf_atomic_flag_clear(&m_read_operation_active);
     m_read_handler(status, p_data);
 }
@@ -371,66 +347,39 @@ static void touchpad_init_callback(ret_code_t status, void *p_user_data) {
 static void drv_touchpad_interrupt_handler(uint32_t const *p_event_pins_low_to_high,
         uint32_t const *p_event_pins_high_to_low)
 {
-    //NRF_GPIO->OUTCLR = (1ul << 2);
     //NRF_LOG_INFO("*IGOR********* Interrupt");
     drv_touchpad_schedule_read(p_user_data);
 }
 
 uint16_t drv_touchpad_dpad_ok_clicked(void) {
-    uint16_t key_clicked = KEY_OK;
     NRF_LOG_INFO("*IGOR* x=%d, y=%d", prev_touch_x, prev_touch_y);
     if (prev_touch_x == INT16_MAX && prev_touch_y == INT16_MAX) {
         NRF_LOG_INFO("*IGOR* DPAD OK");
-        key_clicked = KEY_OK;
+        return KEY_OK;
     }
 
     if ((prev_touch_x <= TOUCHPAD_LOW_TH_X) &&
             (prev_touch_y >= TOUCHPAD_LOW_TH_Y) && (prev_touch_y <= TOUCHPAD_HIGH_TH_Y)) {
-#if NEWT_DEV_BOARD
-        NRF_LOG_INFO("*IGOR* KEY_UP");
-        key_clicked = KEY_UP;
-#else
-        NRF_LOG_INFO("*IGOR* KEY_DOWN");
-        key_clicked = KEY_DOWN;
-#endif
+        NRF_LOG_INFO("*IGOR* DPAD UP");
+        return KEY_UP;
     }
     else if ((prev_touch_x >= TOUCHPAD_HIGH_TH_X) &&
             (prev_touch_y >= TOUCHPAD_LOW_TH_Y) && (prev_touch_y <= TOUCHPAD_HIGH_TH_Y)) {
-#if NEWT_DEV_BOARD
-        NRF_LOG_INFO("*IGOR* KEY_DOWN");
-        key_clicked = KEY_DOWN;
-#else
-        NRF_LOG_INFO("*IGOR* KEY_UP");
-        key_clicked = KEY_UP;
-#endif
+        NRF_LOG_INFO("*IGOR* DPAD DOWN");
+        return KEY_DOWN;
     }
     else if ((prev_touch_y <= TOUCHPAD_LOW_TH_Y) &&
             (prev_touch_x >= TOUCHPAD_LOW_TH_X) && (prev_touch_x <= TOUCHPAD_HIGH_TH_X)) {
-#if NEWT_DEV_BOARD
-        NRF_LOG_INFO("*IGOR* KEY_RIGHT");
-        key_clicked = KEY_RIGHT;
-#else
-        NRF_LOG_INFO("*IGOR* KEY_LEFT");
-        key_clicked = KEY_LEFT;
-#endif
+        NRF_LOG_INFO("*IGOR* DPAD RIGHT");
+        return KEY_RIGHT;
     }
     else if ((prev_touch_y >= TOUCHPAD_HIGH_TH_Y) &&
             (prev_touch_x >= TOUCHPAD_LOW_TH_X) && (prev_touch_x <= TOUCHPAD_HIGH_TH_X)) {
-#if NEWT_DEV_BOARD
-        NRF_LOG_INFO("*IGOR* KEY_LEFT");
-        key_clicked = KEY_LEFT;
-#else
-        NRF_LOG_INFO("*IGOR* KEY_RIGHT");
-        key_clicked = KEY_RIGHT;
-#endif
+        NRF_LOG_INFO("*IGOR* DPAD LEFT");
+        return KEY_LEFT;
     }
 
-    prev_key_clicked = key_clicked;
-    return key_clicked;
-}
-
-uint16_t drv_touchpad_dpad_ok_released(void) {
-    return prev_key_clicked;
+    return KEY_OK;
 }
 
 ret_code_t drv_touchpad_init(drv_touchpad_read_handler_t read_handler, drv_touchpad_data_t *p_u_data) {
@@ -479,8 +428,6 @@ ret_code_t drv_touchpad_init(drv_touchpad_read_handler_t read_handler, drv_touch
     if (status != NRF_SUCCESS) {
         NRF_LOG_INFO("*IGOR* TP init err");
     }
-
-    prev_key_clicked = KEY_OK;
 
     return drv_touchpad_disable();
 }

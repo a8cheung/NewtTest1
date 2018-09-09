@@ -195,9 +195,7 @@ static void drv_keyboard_gpio_cfg(uint32_t mask, uint32_t pin_cnf)
 static void drv_keyboard_gpio_init(void)
 {
     // Make sure that columns will drive 0 when they will be configured as outputs.
-    //NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
-    // Drive PullUps High
-    NRF_GPIO->OUTSET = KEYBOARD_MASK_COL_ALL;
+    NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
     __DSB();
 
     // Configure Columns.
@@ -212,7 +210,7 @@ static void drv_keyboard_gpio_init(void)
     drv_keyboard_gpio_cfg(KEYBOARD_MASK_ROW_ALL,
             (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
             (GPIO_PIN_CNF_DRIVE_S0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
-            (GPIO_PIN_CNF_PULL_Disabled    << GPIO_PIN_CNF_PULL_Pos)  |
+            (GPIO_PIN_CNF_PULL_Pullup    << GPIO_PIN_CNF_PULL_Pos)  |
             (GPIO_PIN_CNF_DIR_Input        << GPIO_PIN_CNF_DIR_Pos)   |
             (GPIO_PIN_CNF_INPUT_Connect    << GPIO_PIN_CNF_INPUT_Pos) );
 
@@ -245,7 +243,7 @@ static ret_code_t drv_keyboard_sense_enable(void)
 {
     // Drive "1" on all columns.
     //NRF_GPIO->OUTSET = KEYBOARD_MASK_COL_ALL;
-    //NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
+    NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
     __DSB();
 
     // Enable GPIOTE sensing.
@@ -265,7 +263,7 @@ static ret_code_t drv_keyboard_sense_disable(void)
     }
 
     // Drive "0" on all columns.
-    //NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
+    NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
     __DSB();
 
     return NRF_SUCCESS;
@@ -366,8 +364,6 @@ static void drv_keyboard_scan(void* p_context)
     m_key_vector_size   = 0;
     m_keys_blocked      = false;
 
-    //NRF_LOG_INFO("*IGOR* gpios=%08x", (unsigned int) gpio_state);
-
     for (column = 0; column < KEYBOARD_NUM_OF_COLUMNS; column++)
     {
         if (rows_state[column] == 0)
@@ -382,7 +378,7 @@ static void drv_keyboard_scan(void* p_context)
             if ((rows_state[column] & (1ul << row)) != 0)
             {
                 detected_keypresses_on_column += 1;
-                //NRF_LOG_INFO("*IGOR* Key nbr %u pressed", (unsigned int) row);
+                //NRF_LOG_INFO("*IGOR* row nbr %u pressed", (unsigned int) row);
 
                 if (m_key_vector_size < DRV_KEYBOARD_MAX_KEYS)
                 {

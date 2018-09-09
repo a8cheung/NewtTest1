@@ -1,0 +1,372 @@
+--- Source/Drivers/drv_keyboard_matrix.c
++++ Source/Drivers/drv_keyboard_matrix.c
+@@ -55,6 +55,11 @@
+ #include "resources.h"
+ #include "sr3_config.h"
+ 
++#if 0
++#define CONFIG_KBD_ENABLED 1
++#define CONFIG_KBD_DRIVER CONFIG_KBD_DRIVER_GPIO
++#endif
++
+ #if (CONFIG_KBD_ENABLED && (CONFIG_KBD_DRIVER == CONFIG_KBD_DRIVER_GPIO))
+ 
+ #define NRF_LOG_MODULE_NAME drv_keyboard
+@@ -67,8 +72,8 @@ NRF_LOG_MODULE_REGISTER();
+ 
+ #define KEYBOARD_MODE                   KEYBOARD_MODE_GPIOTE
+ 
+-#define KEYBOARD_NUM_OF_COLUMNS         8  //!< Number of columns in the keyboard matrix.
+-#define KEYBOARD_NUM_OF_ROWS            8  //!< Number of rows in the keyboard matrix.
++#define KEYBOARD_NUM_OF_COLUMNS         1  //!< Number of columns (out) in the keyboard matrix.
++#define KEYBOARD_NUM_OF_ROWS            12  //!< Number of rows (in) in the keyboard matrix.
+ #define KEYBOARD_IDLE_SCAN_CNT_MAX      3  //!< Idle scans before switching into interrupt mode
+ #define KEYBOARD_SELECT_TIME            3  //!< Time required to select given column and charge parasitic capacitances through switch resistance [us].
+ 
+@@ -88,13 +93,13 @@ NRF_LOG_MODULE_REGISTER();
+ #define KEYBOARD_MASK_COL_7  (IS_IO_VALID(CONFIG_IO_KEY_COL_7) ? (1ul << CONFIG_IO_KEY_COL_7) : 0)
+ 
+ #define KEYBOARD_MASK_COL_ALL ( KEYBOARD_MASK_COL_0 \
+-                              | KEYBOARD_MASK_COL_1 \
+-                              | KEYBOARD_MASK_COL_2 \
+-                              | KEYBOARD_MASK_COL_3 \
+-                              | KEYBOARD_MASK_COL_4 \
+-                              | KEYBOARD_MASK_COL_5 \
+-                              | KEYBOARD_MASK_COL_6 \
+-                              | KEYBOARD_MASK_COL_7 )
++        | KEYBOARD_MASK_COL_1 \
++        | KEYBOARD_MASK_COL_2 \
++        | KEYBOARD_MASK_COL_3 \
++        | KEYBOARD_MASK_COL_4 \
++        | KEYBOARD_MASK_COL_5 \
++        | KEYBOARD_MASK_COL_6 \
++        | KEYBOARD_MASK_COL_7 )
+ 
+ #define KEYBOARD_MASK_ROW_0  (IS_IO_VALID(CONFIG_IO_KEY_ROW_0) ? (1ul << CONFIG_IO_KEY_ROW_0) : 0)
+ #define KEYBOARD_MASK_ROW_1  (IS_IO_VALID(CONFIG_IO_KEY_ROW_1) ? (1ul << CONFIG_IO_KEY_ROW_1) : 0)
+@@ -104,15 +109,25 @@ NRF_LOG_MODULE_REGISTER();
+ #define KEYBOARD_MASK_ROW_5  (IS_IO_VALID(CONFIG_IO_KEY_ROW_5) ? (1ul << CONFIG_IO_KEY_ROW_5) : 0)
+ #define KEYBOARD_MASK_ROW_6  (IS_IO_VALID(CONFIG_IO_KEY_ROW_6) ? (1ul << CONFIG_IO_KEY_ROW_6) : 0)
+ #define KEYBOARD_MASK_ROW_7  (IS_IO_VALID(CONFIG_IO_KEY_ROW_7) ? (1ul << CONFIG_IO_KEY_ROW_7) : 0)
++#define KEYBOARD_MASK_ROW_8  (IS_IO_VALID(CONFIG_IO_KEY_ROW_8) ? (1ul << CONFIG_IO_KEY_ROW_8) : 0)
++#define KEYBOARD_MASK_ROW_9  (IS_IO_VALID(CONFIG_IO_KEY_ROW_9) ? (1ul << CONFIG_IO_KEY_ROW_9) : 0)
++#define KEYBOARD_MASK_ROW_10  (IS_IO_VALID(CONFIG_IO_KEY_ROW_10) ? (1ul << CONFIG_IO_KEY_ROW_10) : 0)
++#define KEYBOARD_MASK_ROW_11 (IS_IO_VALID(CONFIG_IO_KEY_ROW_11) ? (1ul << CONFIG_IO_KEY_ROW_11) : 0)
++//#define KEYBOARD_MASK_ROW_12 (IS_IO_VALID(CONFIG_IO_KEY_ROW_12) ? (1ul << CONFIG_IO_KEY_ROW_12) : 0)
++
+ 
+ #define KEYBOARD_MASK_ROW_ALL ( KEYBOARD_MASK_ROW_0 \
+-                              | KEYBOARD_MASK_ROW_1 \
+-                              | KEYBOARD_MASK_ROW_2 \
+-                              | KEYBOARD_MASK_ROW_3 \
+-                              | KEYBOARD_MASK_ROW_4 \
+-                              | KEYBOARD_MASK_ROW_5 \
+-                              | KEYBOARD_MASK_ROW_6 \
+-                              | KEYBOARD_MASK_ROW_7 )
++        | KEYBOARD_MASK_ROW_1 \
++        | KEYBOARD_MASK_ROW_2 \
++        | KEYBOARD_MASK_ROW_3 \
++        | KEYBOARD_MASK_ROW_4 \
++        | KEYBOARD_MASK_ROW_5 \
++        | KEYBOARD_MASK_ROW_6 \
++        | KEYBOARD_MASK_ROW_7 \
++        | KEYBOARD_MASK_ROW_8 \
++        | KEYBOARD_MASK_ROW_9 \
++        | KEYBOARD_MASK_ROW_10 \
++        | KEYBOARD_MASK_ROW_11 )
+ 
+ static drv_keyboard_event_handler_t   m_keyboard_event_handler;             //!< Keyboard event handler
+ static uint8_t                        m_key_vector[DRV_KEYBOARD_MAX_KEYS];  //!< vector holding currently pressed keys. Filled up from index 0.
+@@ -129,26 +144,31 @@ static uint8_t                        m_idle_scan_counter;                  //!<
+ /** Table describing relationship between column number and column pin */
+ static const uint8_t m_column_to_pin_map[KEYBOARD_NUM_OF_COLUMNS] =
+ {
+-    (uint8_t)(CONFIG_IO_KEY_COL_0),
+-    (uint8_t)(CONFIG_IO_KEY_COL_1),
+-    (uint8_t)(CONFIG_IO_KEY_COL_2),
+-    (uint8_t)(CONFIG_IO_KEY_COL_3),
+-    (uint8_t)(CONFIG_IO_KEY_COL_4),
+-    (uint8_t)(CONFIG_IO_KEY_COL_5),
+-    (uint8_t)(CONFIG_IO_KEY_COL_6),
+-    (uint8_t)(CONFIG_IO_KEY_COL_7),
++        (uint8_t)(CONFIG_IO_KEY_COL_0),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_1),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_2),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_3),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_4),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_5),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_6),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_7),
+ };
+ 
+ static const uint8_t m_row_to_pin_map[KEYBOARD_NUM_OF_ROWS] =
+ {
+-    (uint8_t)(CONFIG_IO_KEY_ROW_0),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_1),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_2),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_3),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_4),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_5),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_6),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_7),
++        (uint8_t)(CONFIG_IO_KEY_ROW_0),
++        (uint8_t)(CONFIG_IO_KEY_ROW_1),
++        (uint8_t)(CONFIG_IO_KEY_ROW_2),
++        (uint8_t)(CONFIG_IO_KEY_ROW_3),
++        (uint8_t)(CONFIG_IO_KEY_ROW_4),
++        (uint8_t)(CONFIG_IO_KEY_ROW_5),
++        (uint8_t)(CONFIG_IO_KEY_ROW_6),
++        (uint8_t)(CONFIG_IO_KEY_ROW_7),
++        (uint8_t)(CONFIG_IO_KEY_ROW_8),
++        (uint8_t)(CONFIG_IO_KEY_ROW_9),
++        (uint8_t)(CONFIG_IO_KEY_ROW_10),
++        (uint8_t)(CONFIG_IO_KEY_ROW_11),
++//        (uint8_t)(CONFIG_IO_KEY_ROW_12),
+ };
+ 
+ /**@brief Set desired configuration on given GPIOs. */
+@@ -175,28 +195,30 @@ static void drv_keyboard_gpio_init(void)
+ {
+     // Make sure that columns will drive 0 when they will be configured as outputs.
+     NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
++    __DSB();
+ 
+     // Configure Columns.
+     drv_keyboard_gpio_cfg(KEYBOARD_MASK_COL_ALL,
+-                          (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
+-                          (GPIO_PIN_CNF_DRIVE_D0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
+-                          (GPIO_PIN_CNF_PULL_Disabled    << GPIO_PIN_CNF_PULL_Pos)  |
+-                          (GPIO_PIN_CNF_DIR_Output       << GPIO_PIN_CNF_DIR_Pos)   |
+-                          (GPIO_PIN_CNF_INPUT_Disconnect << GPIO_PIN_CNF_INPUT_Pos) );
++            (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
++            (GPIO_PIN_CNF_DRIVE_D0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
++            (GPIO_PIN_CNF_PULL_Disabled    << GPIO_PIN_CNF_PULL_Pos)  |
++            (GPIO_PIN_CNF_DIR_Output       << GPIO_PIN_CNF_DIR_Pos)   |
++            (GPIO_PIN_CNF_INPUT_Disconnect << GPIO_PIN_CNF_INPUT_Pos) );
+ 
+     // Configure Rows.
+     drv_keyboard_gpio_cfg(KEYBOARD_MASK_ROW_ALL,
+-                          (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
+-                          (GPIO_PIN_CNF_DRIVE_S0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
+-                          (GPIO_PIN_CNF_PULL_Pulldown    << GPIO_PIN_CNF_PULL_Pos)  |
+-                          (GPIO_PIN_CNF_DIR_Input        << GPIO_PIN_CNF_DIR_Pos)   |
+-                          (GPIO_PIN_CNF_INPUT_Connect    << GPIO_PIN_CNF_INPUT_Pos) );
++            (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
++            (GPIO_PIN_CNF_DRIVE_S0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
++            (GPIO_PIN_CNF_PULL_Pullup    << GPIO_PIN_CNF_PULL_Pos)  |
++            (GPIO_PIN_CNF_DIR_Input        << GPIO_PIN_CNF_DIR_Pos)   |
++            (GPIO_PIN_CNF_INPUT_Connect    << GPIO_PIN_CNF_INPUT_Pos) );
++
+ }
+ 
+ /**@brief Extract rows state form gpio lines state. */
+-static uint8_t drv_keyboard_get_rows_state(uint32_t gpio_state)
++static uint16_t drv_keyboard_get_rows_state(uint32_t gpio_state)
+ {
+-    uint8_t rows_state = 0;
++    uint16_t rows_state = 0;
+     unsigned int i;
+ 
+     for (i = 0; i < KEYBOARD_NUM_OF_ROWS; i++)
+@@ -219,7 +241,8 @@ static uint8_t drv_keyboard_get_rows_state(uint32_t gpio_state)
+ static ret_code_t drv_keyboard_sense_enable(void)
+ {
+     // Drive "1" on all columns.
+-    NRF_GPIO->OUTSET = KEYBOARD_MASK_COL_ALL;
++    //NRF_GPIO->OUTSET = KEYBOARD_MASK_COL_ALL;
++    NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
+     __DSB();
+ 
+     // Enable GPIOTE sensing.
+@@ -269,8 +292,8 @@ static void drv_keyboard_scan_handler(uint8_t *p_pressed_keys, uint8_t num_of_pr
+             // Keep actively polling keyboard if it is in use.
+             NRF_LOG_DEBUG("%s(): Timer Enabled", __func__);
+             APP_ERROR_CHECK(app_timer_start(m_keyboard_timer,
+-                                        APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
+-                                        (void *)(drv_keyboard_scan_handler)));
++                    APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
++                    (void *)(drv_keyboard_scan_handler)));
+         }
+         else
+         {
+@@ -286,9 +309,11 @@ static void drv_keyboard_scan_handler(uint8_t *p_pressed_keys, uint8_t num_of_pr
+ static void drv_keyboard_scan(void* p_context)
+ {
+     drv_keyboard_event_handler_t callback = (drv_keyboard_event_handler_t)(p_context);
+-    uint8_t blocking_mask, rows_state[KEYBOARD_NUM_OF_COLUMNS], detected_keypresses_on_column;
++    uint8_t blocking_mask, detected_keypresses_on_column;
+     unsigned int column, row;
++    uint16_t rows_state[KEYBOARD_NUM_OF_COLUMNS];
+ 
++    /*
+     // Perform scan.
+     for (column = 0; column < KEYBOARD_NUM_OF_COLUMNS; column++)
+     {
+@@ -310,14 +335,28 @@ static void drv_keyboard_scan(void* p_context)
+ 
+         // Read GPIOs state.
+         gpio_state = NRF_GPIO->IN;
++        NRF_LOG_INFO("*IGOR* gpios=%08x", (unsigned int) gpio_state);
+ 
+         // Restore "0" on the selected column.
+         NRF_GPIO->OUTCLR = (1ul << pin);
+         __DSB();
+ 
+         // Save rows state for given column.
+-        rows_state[column] = drv_keyboard_get_rows_state(gpio_state);
++        //rows_state[column] = drv_keyboard_get_rows_state(gpio_state);
++        // TODO Remove. FIX to drive low, not needed on FB HW
++        rows_state[column] = drv_keyboard_get_rows_state(~gpio_state);
++
+     }
++     */
++
++    uint32_t gpio_state;
++
++    // Wait for column signal propagation.
++    nrf_delay_us(KEYBOARD_SELECT_TIME);
++
++    gpio_state = NRF_GPIO->IN;
++
++    rows_state[0] = drv_keyboard_get_rows_state(~gpio_state);
+ 
+     // Process results.
+     blocking_mask       = 0;
+@@ -332,18 +371,19 @@ static void drv_keyboard_scan(void* p_context)
+         }
+ 
+         detected_keypresses_on_column = 0;
+-        
++
+         for (row = 0; row < KEYBOARD_NUM_OF_ROWS; row++)
+         {
+             if ((rows_state[column] & (1ul << row)) != 0)
+             {
+                 detected_keypresses_on_column += 1;
+-                
++                //NRF_LOG_INFO("*IGOR* row nbr %u pressed", (unsigned int) row);
++
+                 if (m_key_vector_size < DRV_KEYBOARD_MAX_KEYS)
+                 {
+                     m_key_vector[m_key_vector_size++] = KEYBOARD_KEY_ID(row, column);
+                 }
+-                
++
+             }
+         }
+ 
+@@ -366,8 +406,9 @@ static void drv_keyboard_scan(void* p_context)
+ #if (KEYBOARD_MODE == KEYBOARD_MODE_GPIOTE)
+ /**@brief GPIOTE PORT interrupt handler.*/
+ static void drv_keyboard_interrupt_handler(uint32_t const *p_event_pins_low_to_high,
+-                                           uint32_t const *p_event_pins_high_to_low)
++        uint32_t const *p_event_pins_high_to_low)
+ {
++    //NRF_LOG_INFO("*IGOR* Interrupt");
+     if (m_keyboard_scan_enabled)
+     {
+         NRF_LOG_DEBUG("%s(): Interrupt", __func__);
+@@ -380,8 +421,8 @@ static void drv_keyboard_interrupt_handler(uint32_t const *p_event_pins_low_to_h
+ 
+         // Schedule keyboard_scan
+         APP_ERROR_CHECK(app_isched_event_put(&g_fg_scheduler,
+-                                             drv_keyboard_scan,
+-                                             (void *)(drv_keyboard_scan_handler)));
++                drv_keyboard_scan,
++                (void *)(drv_keyboard_scan_handler)));
+     }
+ }
+ #endif /* (KEYBOARD_MODE == KEYBOARD_MODE_GPIOTE) */
+@@ -403,15 +444,18 @@ ret_code_t drv_keyboard_init(drv_keyboard_event_handler_t keyboard_event_handler
+     {
+         return status;
+     }
+-
+ #if (KEYBOARD_MODE == KEYBOARD_MODE_GPIOTE)
+-    uint32_t low_to_high_mask = KEYBOARD_MASK_ROW_ALL;
+-    uint32_t high_to_low_mask = 0;
++
++    // TODO Remove. FIX to drive low, not needed on FB HW
++    //    uint32_t low_to_high_mask = KEYBOARD_MASK_ROW_ALL;
++    //    uint32_t high_to_low_mask = 0;
++    uint32_t low_to_high_mask = 0;
++    uint32_t high_to_low_mask = KEYBOARD_MASK_ROW_ALL;
+ 
+     status = app_gpiote_user_register(&m_keyboard_gpiote,
+-                                      &low_to_high_mask,
+-                                      &high_to_low_mask,
+-                                      drv_keyboard_interrupt_handler);
++            &low_to_high_mask,
++            &high_to_low_mask,
++            drv_keyboard_interrupt_handler);
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+@@ -424,8 +468,8 @@ ret_code_t drv_keyboard_init(drv_keyboard_event_handler_t keyboard_event_handler
+ }
+ 
+ ret_code_t drv_keyboard_keys_get(uint8_t *p_pressed_keys,
+-                                 uint8_t *p_number_of_pressed_keys,
+-                                 bool *p_keys_blocked)
++        uint8_t *p_number_of_pressed_keys,
++        bool *p_keys_blocked)
+ {
+     if (m_keyboard_scan_enabled)
+     {
+@@ -453,13 +497,13 @@ ret_code_t drv_keyboard_enable(void)
+ #if (KEYBOARD_MODE == KEYBOARD_MODE_TIMER)
+     NRF_LOG_DEBUG("%s(): Timer Enabled", __func__);
+     return app_timer_start(m_keyboard_timer,
+-                           APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
+-                           (void *)m_keyboard_event_handler);
++            APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
++            (void *)m_keyboard_event_handler);
+ #else
+     NRF_LOG_DEBUG("%s(): Timer Enabled", __func__);
+     return app_timer_start(m_keyboard_timer,
+-                           APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
+-                           (void *)drv_keyboard_scan_handler);
++            APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
++            (void *)drv_keyboard_scan_handler);
+ #endif
+ }
+ 
+--- Source/Drivers/drv_keyboard_matrix.c
++++ Source/Drivers/drv_keyboard_matrix.c
+@@ -73,7 +73,7 @@ NRF_LOG_MODULE_REGISTER();
+ #define KEYBOARD_MODE                   KEYBOARD_MODE_GPIOTE
+ 
+ #define KEYBOARD_NUM_OF_COLUMNS         1  //!< Number of columns (out) in the keyboard matrix.
+-#define KEYBOARD_NUM_OF_ROWS            12  //!< Number of rows (in) in the keyboard matrix.
++#define KEYBOARD_NUM_OF_ROWS            13  //!< Number of rows (in) in the keyboard matrix.
+ #define KEYBOARD_IDLE_SCAN_CNT_MAX      3  //!< Idle scans before switching into interrupt mode
+ #define KEYBOARD_SELECT_TIME            3  //!< Time required to select given column and charge parasitic capacitances through switch resistance [us].
+ 
+@@ -113,7 +113,7 @@ NRF_LOG_MODULE_REGISTER();
+ #define KEYBOARD_MASK_ROW_9  (IS_IO_VALID(CONFIG_IO_KEY_ROW_9) ? (1ul << CONFIG_IO_KEY_ROW_9) : 0)
+ #define KEYBOARD_MASK_ROW_10  (IS_IO_VALID(CONFIG_IO_KEY_ROW_10) ? (1ul << CONFIG_IO_KEY_ROW_10) : 0)
+ #define KEYBOARD_MASK_ROW_11 (IS_IO_VALID(CONFIG_IO_KEY_ROW_11) ? (1ul << CONFIG_IO_KEY_ROW_11) : 0)
+-//#define KEYBOARD_MASK_ROW_12 (IS_IO_VALID(CONFIG_IO_KEY_ROW_12) ? (1ul << CONFIG_IO_KEY_ROW_12) : 0)
++#define KEYBOARD_MASK_ROW_12 (IS_IO_VALID(CONFIG_IO_KEY_ROW_12) ? (1ul << CONFIG_IO_KEY_ROW_12) : 0)
+ 
+ 
+ #define KEYBOARD_MASK_ROW_ALL ( KEYBOARD_MASK_ROW_0 \
+@@ -127,7 +127,8 @@ NRF_LOG_MODULE_REGISTER();
+         | KEYBOARD_MASK_ROW_8 \
+         | KEYBOARD_MASK_ROW_9 \
+         | KEYBOARD_MASK_ROW_10 \
+-        | KEYBOARD_MASK_ROW_11 )
++        | KEYBOARD_MASK_ROW_11 \
++        | KEYBOARD_MASK_ROW_12 )
+ 
+ static drv_keyboard_event_handler_t   m_keyboard_event_handler;             //!< Keyboard event handler
+ static uint8_t                        m_key_vector[DRV_KEYBOARD_MAX_KEYS];  //!< vector holding currently pressed keys. Filled up from index 0.
+@@ -168,7 +169,7 @@ static const uint8_t m_row_to_pin_map[KEYBOARD_NUM_OF_ROWS] =
+         (uint8_t)(CONFIG_IO_KEY_ROW_9),
+         (uint8_t)(CONFIG_IO_KEY_ROW_10),
+         (uint8_t)(CONFIG_IO_KEY_ROW_11),
+-//        (uint8_t)(CONFIG_IO_KEY_ROW_12),
++        (uint8_t)(CONFIG_IO_KEY_ROW_12),
+ };
+ 
+ /**@brief Set desired configuration on given GPIOs. */

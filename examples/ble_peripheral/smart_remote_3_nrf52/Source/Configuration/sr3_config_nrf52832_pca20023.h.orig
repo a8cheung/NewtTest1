@@ -50,8 +50,6 @@
 #ifndef _SR3_CONFIG_BOARD_H
 #define _SR3_CONFIG_BOARD_H
 
-#define NEWT_DEV_BOARD 0
-
 // <<< Use Configuration Wizard in Context Menu >>>
 
 // <h> Smart Remote 3 nRF52 Features
@@ -643,11 +641,7 @@
 // <o> Gyroscope Mode Toggle Key ID <0x00-0xFF>
 // <i> Select the key that toggles the gyroscope mode.
 /**@brief Gyroscope Mode Toggle Key ID <0x00-0xFF> */
-#if NEWT_DEV_BOARD
 #define CONFIG_GYRO_MODE_KEY_ID 0xB0
-#else
-#define CONFIG_GYRO_MODE_KEY_ID 0x20
-#endif
 
 // <o> Left Click Key ID <0x00-0xFF>
 // <i> Select the key that acts as the left mouse button in the gyroscope mode.
@@ -1277,7 +1271,7 @@
 // <o> Standby Time-out [s] <1-3600>
 // <i> Set the time after which the remote is automatically put into deep sleep mode if no user interaction is detected.
 /**@brief Standby Time-out [s] <1-3600> */
-#define CONFIG_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_S 180
+#define CONFIG_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_S 60
 
 // <h> Logging Options
 // <i> This section configures module-specific logging options.
@@ -1713,7 +1707,7 @@
 // <q> Allow Legacy Pairing
 // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
 /**@brief Allow Legacy Pairing */
-#define CONFIG_SEC_LEGACY_PAIRING 1
+#define CONFIG_SEC_LEGACY_PAIRING 0
 
 // <q> Allow LESC Pairing
 // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
@@ -2014,36 +2008,76 @@
 //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
 //  <0xFFFFFFFF=>Disable
 /**@brief Matrix Keyboard: Row 0 Pin */
-
-#if NEWT_DEV_BOARD
 #define CONFIG_IO_KEY_ROW_0 3
+
+// <o> Row 1 Pin
+//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+//  <0xFFFFFFFF=>Disable
+/**@brief Matrix Keyboard: Row 1 Pin */
 #define CONFIG_IO_KEY_ROW_1 8
+
+// <o> Row 2 Pin
+//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+//  <0xFFFFFFFF=>Disable
+/**@brief Matrix Keyboard: Row 2 Pin */
 #define CONFIG_IO_KEY_ROW_2 11
+
+// <o> Row 3 Pin
+//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+//  <0xFFFFFFFF=>Disable
+/**@brief Matrix Keyboard: Row 3 Pin */
 #define CONFIG_IO_KEY_ROW_3 12
+
+// <o> Row 4 Pin
+//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+//  <0xFFFFFFFF=>Disable
+/**@brief Matrix Keyboard: Row 4 Pin */
 #define CONFIG_IO_KEY_ROW_4 16
+
+// <o> Row 5 Pin
+//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+//  <0xFFFFFFFF=>Disable
+/**@brief Matrix Keyboard: Row 5 Pin */
 #define CONFIG_IO_KEY_ROW_5 17
+
+// <o> Row 6 Pin
+//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+//  <0xFFFFFFFF=>Disable
+/**@brief Matrix Keyboard: Row 6 Pin */
 #define CONFIG_IO_KEY_ROW_6 18
+
+// <o> Row 7 Pin
+//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+//  <0xFFFFFFFF=>Disable
+/**@brief Matrix Keyboard: Row Pin */
 #define CONFIG_IO_KEY_ROW_7 19
+
 #define CONFIG_IO_KEY_ROW_8 20
 #define CONFIG_IO_KEY_ROW_9 25
 #define CONFIG_IO_KEY_ROW_10 27
 #define CONFIG_IO_KEY_ROW_11 28
 #define CONFIG_IO_KEY_ROW_12 4
-#else
-#define CONFIG_IO_KEY_ROW_0 3
-#define CONFIG_IO_KEY_ROW_1 8
-#define CONFIG_IO_KEY_ROW_2 11
-#define CONFIG_IO_KEY_ROW_3 12
-#define CONFIG_IO_KEY_ROW_4 16
-#define CONFIG_IO_KEY_ROW_5 17
-#define CONFIG_IO_KEY_ROW_6 18
-#define CONFIG_IO_KEY_ROW_7 19
-#define CONFIG_IO_KEY_ROW_8 20
-#define CONFIG_IO_KEY_ROW_9 25
-#define CONFIG_IO_KEY_ROW_10 0xFFFFFFFF
-#define CONFIG_IO_KEY_ROW_11 0xFFFFFFFF
-#define CONFIG_IO_KEY_ROW_12 0xFFFFFFFF
-#endif
 // </h>
 
 // <h> LEDs

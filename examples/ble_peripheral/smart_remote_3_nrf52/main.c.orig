@@ -107,11 +107,10 @@
  *
  * drv_acc_lis3dh:                      1
  * drv_keyboard_matrix:                 1
- * drv_touch_pad                        1
  * ------------------------------------
- * TOTAL:                               3
+ * TOTAL:                               2
  */
-#define APP_GPIOTE_MAX_USERS            3
+#define APP_GPIOTE_MAX_USERS            2
 
 // Verify SDK configuration.
 STATIC_ASSERT(APP_TIMER_ENABLED);

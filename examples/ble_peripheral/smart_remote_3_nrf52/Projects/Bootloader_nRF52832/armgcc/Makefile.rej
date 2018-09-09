@@ -1,0 +1,10 @@
+--- Projects/Bootloader_nRF52832/armgcc/Makefile
++++ Projects/Bootloader_nRF52832/armgcc/Makefile
+@@ -155,6 +155,7 @@ OPT = -Os -g3
+ 
+ # C flags common to all targets
+ CFLAGS += $(OPT)
++CFLAGS += -DCONFIG_NFCT_PINS_AS_GPIOS
+ CFLAGS += -DBLE_STACK_SUPPORT_REQD
+ CFLAGS += -DDFU_APP_DATA_RESERVED=0x2000
+ CFLAGS += -DFLASH_BUFFER_COUNT=40

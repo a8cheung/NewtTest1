@@ -332,7 +332,6 @@ static void drv_gyro_read_callback(ret_code_t status, void *p_user_data)
 
     if (status == NRF_SUCCESS)
     {
-#if NEWT_DEV_BOARD
         p_samples->AccSamples.X  =  ((int16_t)((s_read_buffer[0+0] << 8) | s_read_buffer[0+1]));
         p_samples->AccSamples.Y  = -((int16_t)((s_read_buffer[0+2] << 8) | s_read_buffer[0+3]));
         p_samples->AccSamples.Z  = -((int16_t)((s_read_buffer[0+4] << 8) | s_read_buffer[0+5]));
@@ -340,15 +339,6 @@ static void drv_gyro_read_callback(ret_code_t status, void *p_user_data)
         p_samples->GyroSamples.X =  ((int16_t)((s_read_buffer[8+0] << 8) | s_read_buffer[8+1]));
         p_samples->GyroSamples.Y =  ((int16_t)((s_read_buffer[8+2] << 8) | s_read_buffer[8+3]));
         p_samples->GyroSamples.Z =  ((int16_t)((s_read_buffer[8+4] << 8) | s_read_buffer[8+5]));
-#else
-        p_samples->AccSamples.Y  = ((int16_t)((s_read_buffer[0+0] << 8) | s_read_buffer[0+1]));
-        p_samples->AccSamples.X  = ((int16_t)((s_read_buffer[0+2] << 8) | s_read_buffer[0+3]));
-        p_samples->AccSamples.Z  = ((int16_t)((s_read_buffer[0+4] << 8) | s_read_buffer[0+5]));
-
-        p_samples->GyroSamples.Y =  ((int16_t)((s_read_buffer[8+0] << 8) | s_read_buffer[8+1]));
-        p_samples->GyroSamples.X =  -((int16_t)((s_read_buffer[8+2] << 8) | s_read_buffer[8+3]));
-        p_samples->GyroSamples.Z =  -((int16_t)((s_read_buffer[8+4] << 8) | s_read_buffer[8+5]));
-#endif
 
         NRF_LOG_DEBUG("%s(): Acc X = %d", (uint32_t)__func__, p_samples->AccSamples.X);
         NRF_LOG_DEBUG("%s(): Acc Y = %d", (uint32_t)__func__, p_samples->AccSamples.Y);

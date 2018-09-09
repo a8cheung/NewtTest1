@@ -1,0 +1,169 @@
+--- Source/Modules/m_touchpad.c
++++ Source/Modules/m_touchpad.c
+@@ -64,8 +64,9 @@
+ #include "nrf_log.h"
+ NRF_LOG_MODULE_REGISTER();
+ 
+-
++#if (CONFIG_TOUCHPAD_DRV == 1)
+ APP_TIMER_DEF                    (s_timer);
++#endif
+ static drv_touchpad_data_t       s_touchpad_data;
+ static bool                      s_touchpad_enabled;
+ static bool                      s_touchpad_tap_state;
+@@ -104,6 +105,57 @@ static void m_touchpad_read_handler(ret_code_t status, drv_touchpad_data_t *p_da
+         p_data->y       = 0;
+     }
+ 
++#if 0
++    if (p_data->x < 0) {
++        timestamp = app_timer_cnt_get();
++        int8_t count = -p_data->x;
++        while (count > 0) {
++            event_send(EVT_KEY_DOWN, KEY_LEFT, timestamp);
++            timestamp += 100;
++            event_send(EVT_KEY_UP, KEY_LEFT, timestamp);
++            timestamp += 100;
++
++            count --;
++        }
++    }
++    else if (p_data->x > 0) {
++        timestamp = app_timer_cnt_get();
++        int8_t count = p_data->x;
++        while (count > 0) {
++            event_send(EVT_KEY_DOWN, KEY_RIGHT, timestamp);
++            timestamp += 100;
++            event_send(EVT_KEY_UP, KEY_RIGHT, timestamp);
++            timestamp += 100;
++
++            count --;
++        }
++    }
++    else if (p_data->y < 0) {
++        timestamp = app_timer_cnt_get();
++        int8_t count = -p_data->y;
++        while (count > 0) {
++            event_send(EVT_KEY_DOWN, KEY_UP, timestamp);
++            timestamp += 100;
++            event_send(EVT_KEY_UP, KEY_UP, timestamp);
++            timestamp += 100;
++
++            count --;
++        }
++    }
++    else if (p_data->y > 0) {
++        timestamp = app_timer_cnt_get();
++        int8_t count = p_data->y;
++        while (count > 0) {
++            event_send(EVT_KEY_DOWN, KEY_DOWN, timestamp);
++            timestamp += 100;
++            event_send(EVT_KEY_UP, KEY_DOWN, timestamp);
++            timestamp += 100;
++
++            count --;
++        }
++    }
++#else
++
+     /* Send events */
+     if (p_data->x)
+     {
+@@ -139,8 +191,10 @@ static void m_touchpad_read_handler(ret_code_t status, drv_touchpad_data_t *p_da
+ 
+         s_touchpad_tap_state = p_data->tap;
+     }
++#endif
+ }
+ 
++#if (CONFIG_TOUCHPAD_DRV == 1)
+ static void m_touchpad_timer_handler(void * p_context)
+ {
+     ret_code_t status;
+@@ -155,19 +209,26 @@ static void m_touchpad_timer_handler(void * p_context)
+         APP_ERROR_CHECK(status);
+     }
+ }
++#endif
+ 
+ ret_code_t m_touchpad_init(void)
+ {
+     ret_code_t status;
+ 
++#if (CONFIG_TOUCHPAD_DRV == 1)
+     status = app_timer_create(&s_timer, APP_TIMER_MODE_REPEATED, m_touchpad_timer_handler);
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+     }
++#endif
+ 
+     // Touchpad init
++#if (CONFIG_TOUCHPAD_DRV == 1)
+     status = drv_touchpad_init(m_touchpad_read_handler);
++#elif (CONFIG_TOUCHPAD_DRV == 2)
++    status = drv_touchpad_init(m_touchpad_read_handler, &s_touchpad_data);
++#endif
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+@@ -183,16 +244,17 @@ ret_code_t m_touchpad_init(void)
+ 
+ ret_code_t m_touchpad_enable(void)
+ {
+-    ret_code_t status;
+-
+     ASSERT(s_touchpad_enabled == false);
+     NRF_LOG_INFO("Enabled");
+ 
++#if (CONFIG_TOUCHPAD_DRV == 1)
++    ret_code_t status;
+     status = app_timer_start(s_timer, APP_TIMER_TICKS(CONFIG_TOUCHPAD_POLL_INTERVAL), NULL);
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+     }
++#endif
+ 
+     s_touchpad_enabled = true;
+ 
+@@ -201,16 +263,17 @@ ret_code_t m_touchpad_enable(void)
+ 
+ ret_code_t m_touchpad_disable(void)
+ {
+-    ret_code_t status;
+-
+     ASSERT(s_touchpad_enabled == true);
+     NRF_LOG_INFO("Disabled");
+ 
++#if (CONFIG_TOUCHPAD_DRV == 1)
++    ret_code_t status;
+     status = app_timer_stop(s_timer);
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+     }
++#endif
+ 
+     s_touchpad_enabled = false;
+ 
+@@ -224,6 +287,19 @@ bool m_touchpad_event_handler(const event_t *p_event)
+         case EVT_SYSTEM_GYRO_STATE:
+             s_gyro_enabled = p_event->system.data;
+             break;
++        case EVT_KEY_DOWN:
++            if (p_event->key.id == KEY_OK_NO_SEND) {
++                uint32_t timestamp;
++                uint16_t key_id_to_send;
++                key_id_to_send = drv_touchpad_dpad_ok_clicked();
++
++                timestamp = app_timer_cnt_get();
++                event_send(EVT_KEY_DOWN, key_id_to_send, timestamp);
++
++                event_send(EVT_KEY_UP, key_id_to_send, timestamp + 10);
++
++            }
++            break;
+ 
+         default:
+             /* Ignore */

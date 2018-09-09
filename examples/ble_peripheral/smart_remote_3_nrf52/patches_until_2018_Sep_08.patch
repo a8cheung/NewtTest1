@@ -1,0 +1,3074 @@
+From 483214dc12af41844e111c4e255d2e8c0e54ef7b Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 16 Jul 2018 14:12:48 +0200
+Subject: [PATCH 01/20] Reconfigured GPIO 09 and 10 to be GPIOs instead of NFC
+ pins
+
+---
+ Projects/Bootloader_nRF52832/armgcc/Makefile | 1 +
+ Projects/Firmware_nRF52832/armgcc/Makefile   | 3 ++-
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/Projects/Bootloader_nRF52832/armgcc/Makefile b/Projects/Bootloader_nRF52832/armgcc/Makefile
+index 213f764..c2586d0 100644
+--- a/Projects/Bootloader_nRF52832/armgcc/Makefile
++++ b/Projects/Bootloader_nRF52832/armgcc/Makefile
+@@ -155,6 +155,7 @@ OPT = -Os -g3
+ 
+ # C flags common to all targets
+ CFLAGS += $(OPT)
++CFLAGS += -DCONFIG_NFCT_PINS_AS_GPIOS
+ CFLAGS += -DBLE_STACK_SUPPORT_REQD
+ CFLAGS += -DDFU_APP_DATA_RESERVED=0x2000
+ CFLAGS += -DFLASH_BUFFER_COUNT=40
+diff --git a/Projects/Firmware_nRF52832/armgcc/Makefile b/Projects/Firmware_nRF52832/armgcc/Makefile
+index 58392b2..0b5f374 100644
+--- a/Projects/Firmware_nRF52832/armgcc/Makefile
++++ b/Projects/Firmware_nRF52832/armgcc/Makefile
+@@ -1,5 +1,5 @@
+ PROJECT_NAME     := Smart_Remote_3_nRF52_Firmware_nRF52832
+-TARGETS          := PCA63519-SR3_nRF52832_Shield CUSTOM-SR3_nRF52832_Custom_Board PCA20023-SR3_nRF52832_Product_Example
++TARGETS          := PCA20023-SR3_nRF52832_Product_Example
+ OUTPUT_DIRECTORY := _build
+ 
+ SHELL=cmd.exe
+@@ -462,6 +462,7 @@ OPT = -O2 -g3
+ 
+ # C flags common to all targets
+ CFLAGS += $(OPT)
++CFLAGS += -DCONFIG_NFCT_PINS_AS_GPIOS
+ CFLAGS += -DAPP_SCHEDULER_ENABLED=1
+ CFLAGS += -DARM_MATH_CM4
+ CFLAGS += -DBLE_STACK_SUPPORT_REQD
+-- 
+2.17.1.windows.2
+
+
+From 207544ee951d1130905d25c757bd565217f52593 Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 16 Jul 2018 14:17:25 +0200
+Subject: [PATCH 02/20] Updated makefile
+
+---
+ Projects/Firmware_nRF52832/armgcc/Makefile | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/Projects/Firmware_nRF52832/armgcc/Makefile b/Projects/Firmware_nRF52832/armgcc/Makefile
+index 0b5f374..4d8341b 100644
+--- a/Projects/Firmware_nRF52832/armgcc/Makefile
++++ b/Projects/Firmware_nRF52832/armgcc/Makefile
+@@ -584,6 +584,22 @@ flash: $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex
+ 	nrfjprog -f nrf52 --program $< --sectorerase
+ 	nrfjprog -f nrf52 --reset
+ 
++flash:
++	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 3 --bootloader-version 2 --bl-settings-version 1 settings.hex
++	nrfjprog -f nrf52 --program settings.hex --sectorerase
++	nrfjprog -f nrf52 --program $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --sectorerase
++	nrfjprog -f nrf52 --reset
++
++merge:
++	mergehex -m $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex settings.hex ../../Bootloader_nRF52832/armgcc/_build/PCA20023-SR3_nRF52832_Product_Example_Bootloader.hex -o remote_fw1.hex
++	mergehex -m remote_fw1.hex ../../../../../../../SoftDevices/nRF52832/s132_nrf52_5.1.0_softdevice.hex -o remote_fw.hex
++	rm remote_fw1.hex
++	@echo Merged all hex file to one file remote_fw.hex
++
++mergeflash:
++	nrfjprog -f nrf52 --program remote_fw.hex --sectorerase
++	nrfjprog -f nrf52 --reset
++
+ erase:
+ 	nrfjprog -f nrf52 --eraseall
+ 
+-- 
+2.17.1.windows.2
+
+
+From a60166a48a1f2a7dbc1c6ace361fadce76c705ec Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 16 Jul 2018 14:20:26 +0200
+Subject: [PATCH 03/20] Updaed GPIOTE module to support up to 16 active
+ interrupts
+
+---
+ Projects/Firmware_nRF52832/config/sdk_config.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Projects/Firmware_nRF52832/config/sdk_config.h b/Projects/Firmware_nRF52832/config/sdk_config.h
+index 553e784..cb2ebfa 100644
+--- a/Projects/Firmware_nRF52832/config/sdk_config.h
++++ b/Projects/Firmware_nRF52832/config/sdk_config.h
+@@ -295,7 +295,7 @@
+ #endif
+ // <o> GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS - Number of lower power input pins 
+ #ifndef GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS
+-#define GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS 9
++#define GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS 16
+ #endif
+ 
+ // <o> GPIOTE_CONFIG_IRQ_PRIORITY  - Interrupt priority
+-- 
+2.17.1.windows.2
+
+
+From 5df7bb81d673629abfa30438b3d18448ba6def8d Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 16 Jul 2018 14:25:59 +0200
+Subject: [PATCH 04/20] Updated key mappings for BLE HID events. Unfortunately
+ changed tab to space in sr3_config.c
+
+---
+ Source/Configuration/sr3_config.c     | 329 ++++++++++++++------------
+ Source/Configuration/sr3_config_hid.h |  74 +++---
+ 2 files changed, 219 insertions(+), 184 deletions(-)
+
+diff --git a/Source/Configuration/sr3_config.c b/Source/Configuration/sr3_config.c
+index deaee07..97a4094 100644
+--- a/Source/Configuration/sr3_config.c
++++ b/Source/Configuration/sr3_config.c
+@@ -1,156 +1,173 @@
+-/**
+- * Copyright (c) 2016 - 2018, Nordic Semiconductor ASA
+- * 
+- * All rights reserved.
+- * 
+- * Redistribution and use in source and binary forms, with or without modification,
+- * are permitted provided that the following conditions are met:
+- * 
+- * 1. Redistributions of source code must retain the above copyright notice, this
+- *    list of conditions and the following disclaimer.
+- * 
+- * 2. Redistributions in binary form, except as embedded into a Nordic
+- *    Semiconductor ASA integrated circuit in a product or a software update for
+- *    such product, must reproduce the above copyright notice, this list of
+- *    conditions and the following disclaimer in the documentation and/or other
+- *    materials provided with the distribution.
+- * 
+- * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
+- *    contributors may be used to endorse or promote products derived from this
+- *    software without specific prior written permission.
+- * 
+- * 4. This software, with or without modification, must only be used with a
+- *    Nordic Semiconductor ASA integrated circuit.
+- * 
+- * 5. Any software provided in binary form under this license must not be reverse
+- *    engineered, decompiled, modified and/or disassembled.
+- * 
+- * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
+- * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+- * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
+- * DISCLAIMED. IN NO EVENT SHALL NORDIC SEMICONDUCTOR ASA OR CONTRIBUTORS BE
+- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+- * 
+- */
+-
+-#include "sr3_config.h"
+-
+-#if defined(CONFIG_BOARD_NRF52832_PCA20023) || \
+-    defined(CONFIG_BOARD_NRF52832_PCA63519) || \
+-    defined(CONFIG_BOARD_NRF52832_CUSTOM)   || \
+-    defined(CONFIG_BOARD_NRF52810_PCA20031) || \
+-    defined(CONFIG_BOARD_NRF52810_CUSTOM)
+-
+-/*
+- * HID keymap. The Consumer Control keys are defined in section 15 of the HID Usage Tables document under the following URL:
+- * http://www.usb.org/developers/hidpage/Hut1_12v2.pdf
+- */
+-const sr3_hid_keymap_t g_sr3_hid_keymap[] =
+-{
+-    { KEY_MEDIA,        HID_USAGE(0x0C, 0x193) },   /* Consumer Control: AL A/V Capture/Playback */
+-    { KEY_0,            HID_USAGE(0x07, 0x27) },    /* Keyboard '0' and ')' */
+-    { KEY_BACK,         HID_USAGE(0x07, 0x2A) },    /* Keyboard Backspace */
+-    { KEY_7,            HID_USAGE(0x07, 0x24) },    /* Keyboard '7' and '&' */
+-    { KEY_8,            HID_USAGE(0x07, 0x25) },    /* Keyboard '8' and '*' */
+-    { KEY_9,            HID_USAGE(0x07, 0x26) },    /* Keyboard '9' and '(' */
+-    { KEY_4,            HID_USAGE(0x07, 0x21) },    /* Keyboard '4' and '$' */
+-    { KEY_5,            HID_USAGE(0x07, 0x22) },    /* Keyboard '5' and '%' */
+-    { KEY_6,            HID_USAGE(0x07, 0x23) },    /* Keyboard '6' and '^' */
+-    { KEY_1,            HID_USAGE(0x07, 0x1E) },    /* Keyboard '1' and '!' */
+-    { KEY_2,            HID_USAGE(0x07, 0x1F) },    /* Keyboard '2' and '@' */
+-    { KEY_3,            HID_USAGE(0x07, 0x20) },    /* Keyboard '3' and '#' */
+-    { KEY_AC_SEARCH,    HID_USAGE(0x0C, 0x221) },   /* Consumer Control: AC Search */
+-    { KEY_VOL_DOWN,     HID_USAGE(0x0C, 0xEA) },    /* Consumer Control: Volume Decrement */
+-    { KEY_CH_DOWN,      HID_USAGE(0x07, 0x4E) },    /* Keyboard Page Down */
+-    { KEY_VOL_UP,       HID_USAGE(0x0C, 0xE9) },    /* Consumer Control: Volume Increment */
+-    { KEY_CH_UP,        HID_USAGE(0x07, 0x4B) },    /* Keyboard Page Up */
+-    { KEY_DOWN,         HID_USAGE(0x07, 0x51) },    /* Keyboard Down Arrow */
+-    { KEY_LEFT,         HID_USAGE(0x07, 0x50) },    /* Keyboard Left Arrow */
+-    { KEY_OK,           HID_USAGE(0x07, 0x28) },    /* Keyboard Enter */
+-    { KEY_RIGHT,        HID_USAGE(0x07, 0x4F) },    /* Keyboard Right Arrow */
+-    { KEY_UP,           HID_USAGE(0x07, 0x52) },    /* Keyboard Up Arrow */
+-    { KEY_PLAY_PAUSE,   HID_USAGE(0x0C, 0xCD) },    /* Consumer Control: Play/Pause */
+-    { KEY_PREV_TRACK,   HID_USAGE(0x0C, 0xB6) },    /* Consumer Control: Scan Prev Track */
+-    { KEY_NEXT_TRACK,   HID_USAGE(0x0C, 0xB5) },    /* Consumer Control: Scan Next Track */
+-    { KEY_STOP,         HID_USAGE(0x0C, 0xB7) },    /* Consumer Control: Stop */
+-    { KEY_MUTE,         HID_USAGE(0x07, 0x7F) },    /* Keyboard Mute */
+-
+-    { MOUSE_KEY_ID(0),  HID_USAGE(0x09, 0x01) },    /* Left Mouse Button */
+-    { MOUSE_KEY_ID(1),  HID_USAGE(0x09, 0x02) },    /* Right Mouse Button */
+-};
+-
+-const size_t g_sr3_hid_keymap_size = sizeof(g_sr3_hid_keymap) / sizeof(g_sr3_hid_keymap[0]);
+-
+-/*
+- * IR keymap (SIRC).
+- */
+-const sr3_ir_keymap_t g_sr3_ir_keymap[] =
+-{
+-    { KEY_0,            SR3_IR_SYMBOL( 9, 1) },    /* SIRC 0 */
+-    { KEY_7,            SR3_IR_SYMBOL( 6, 1) },    /* SIRC 7 */
+-    { KEY_8,            SR3_IR_SYMBOL( 7, 1) },    /* SIRC 8 */
+-    { KEY_9,            SR3_IR_SYMBOL( 8, 1) },    /* SIRC 9 */
+-    { KEY_4,            SR3_IR_SYMBOL( 3, 1) },    /* SIRC 4 */
+-    { KEY_5,            SR3_IR_SYMBOL( 4, 1) },    /* SIRC 5 */
+-    { KEY_6,            SR3_IR_SYMBOL( 5, 1) },    /* SIRC 6 */
+-    { KEY_1,            SR3_IR_SYMBOL( 0, 1) },    /* SIRC 1 */
+-    { KEY_2,            SR3_IR_SYMBOL( 1, 1) },    /* SIRC 2 */
+-    { KEY_3,            SR3_IR_SYMBOL( 2, 1) },    /* SIRC 3 */
+-    { KEY_VOL_DOWN,     SR3_IR_SYMBOL(19, 1) },    /* SIRC Volume Down */
+-    { KEY_CH_DOWN,      SR3_IR_SYMBOL(17, 1) },    /* SIRC Channel Down */
+-    { KEY_VOL_UP,       SR3_IR_SYMBOL(18, 1) },    /* SIRC Volume Up */
+-    { KEY_CH_UP,        SR3_IR_SYMBOL(16, 1) },    /* SIRC Channel Up */
+-    { KEY_OK,           SR3_IR_SYMBOL(11, 1) },    /* SIRC Enter */
+-    { KEY_MUTE,         SR3_IR_SYMBOL(20, 1) },    /* SIRC Mute */
+-    { KEY_POWER,        SR3_IR_SYMBOL(21, 1) },    /* SIRC Power */
+-};
+-
+-const size_t g_sr3_ir_keymap_size = sizeof(g_sr3_ir_keymap) / sizeof(g_sr3_ir_keymap[0]);
+-
+-/*
+- * Buzzer sound
+- */
+-const sr3_buzzer_sound_t g_sr3_buzzer_sound_mild[] =
+-{
+-    {  20, 180 },
+-    {  20, 180 },
+-    {  20, 180 },
+-    {   0, 400 },
+-    {   0,   0 },
+-};
+-
+-const sr3_buzzer_sound_t g_sr3_buzzer_sound_high[] =
+-{
+-    { 750, 250 },
+-    { 250, 250 },
+-    {   0, 750 },
+-    { 750, 250 },
+-    { 750, 250 },
+-    { 750, 250 },
+-    {   0, 750 },
+-    { 250, 250 },
+-    { 750, 250 },
+-    { 250, 250 },
+-    {   0, 750 },
+-    { 750, 250 },
+-    { 250, 250 },
+-    { 250, 250 },
+-    {   0, 750 },
+-    { 250, 250 },
+-    { 250, 250 },
+-    {   0, 750 },
+-    { 750, 250 },
+-    { 250, 250 },
+-    { 750, 250 },
+-    { 250, 250 },
+-    {   0, 750 },
+-    {   0,   0 },
+-};
+-#else
+-# error "CONFIG_BOARD_xxx is not defined!"
+-#endif
++/**
++ * Copyright (c) 2016 - 2018, Nordic Semiconductor ASA
++ * 
++ * All rights reserved.
++ * 
++ * Redistribution and use in source and binary forms, with or without modification,
++ * are permitted provided that the following conditions are met:
++ * 
++ * 1. Redistributions of source code must retain the above copyright notice, this
++ *    list of conditions and the following disclaimer.
++ * 
++ * 2. Redistributions in binary form, except as embedded into a Nordic
++ *    Semiconductor ASA integrated circuit in a product or a software update for
++ *    such product, must reproduce the above copyright notice, this list of
++ *    conditions and the following disclaimer in the documentation and/or other
++ *    materials provided with the distribution.
++ * 
++ * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
++ *    contributors may be used to endorse or promote products derived from this
++ *    software without specific prior written permission.
++ * 
++ * 4. This software, with or without modification, must only be used with a
++ *    Nordic Semiconductor ASA integrated circuit.
++ * 
++ * 5. Any software provided in binary form under this license must not be reverse
++ *    engineered, decompiled, modified and/or disassembled.
++ * 
++ * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
++ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
++ * DISCLAIMED. IN NO EVENT SHALL NORDIC SEMICONDUCTOR ASA OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
++ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
++ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
++ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ * 
++ */
++
++#include "sr3_config.h"
++
++#if defined(CONFIG_BOARD_NRF52832_PCA20023) || \
++    defined(CONFIG_BOARD_NRF52832_PCA63519) || \
++    defined(CONFIG_BOARD_NRF52832_CUSTOM)   || \
++    defined(CONFIG_BOARD_NRF52810_PCA20031) || \
++    defined(CONFIG_BOARD_NRF52810_CUSTOM)
++
++
++// Use NFC pins as GPIOs
++#define CONFIG_NFCT_PINS_AS_GPIOS 1
++
++/*
++ * HID keymap. The Consumer Control keys are defined in section 15 of the HID Usage Tables document under the following URL:
++ * http://www.usb.org/developers/hidpage/Hut1_12v2.pdf
++ */
++const sr3_hid_keymap_t g_sr3_hid_keymap[] =
++{
++        { KEY_UP,           HID_USAGE(0x07, 0x52) },    /* Keyboard Up Arrow */
++        { KEY_DOWN,         HID_USAGE(0x07, 0x51) },    /* Keyboard Down Arrow */
++        { KEY_LEFT,         HID_USAGE(0x07, 0x50) },    /* Keyboard Left Arrow */
++        { KEY_RIGHT,        HID_USAGE(0x07, 0x4F) },    /* Keyboard Right Arrow */
++        { KEY_VOL_DOWN,     HID_USAGE(0x0C, 0xEA) },    /* Consumer Control: Volume Decrement */
++        { KEY_VOL_UP,       HID_USAGE(0x0C, 0xE9) },    /* Consumer Control: Volume Increment */
++        { KEY_PLAY_PAUSE,   HID_USAGE(0x0C, 0xCD) },    /* Consumer Control: Play/Pause */
++        { KEY_AC_SEARCH,    HID_USAGE(0x0C, 0x221) },   /* Consumer Control: AC Search */
++        { KEY_HOME,         HID_USAGE(0x0C, 0x223) },    /* Keyboard Home key */
++        { KEY_BACK,         HID_USAGE(0x0C, 0x224) },    /* Keyboard Backspace */
++        { KEY_OK,           HID_USAGE(0x07, 0x28) },    /* Keyboard Enter */
++//	    { KEY_MUTE,         HID_USAGE(0x07, 0x7F) },    /* Keyboard Mute */
++
++//    { KEY_MEDIA,        HID_USAGE(0x0C, 0x193) },   /* Consumer Control: AL A/V Capture/Playback */
++//    { KEY_0,            HID_USAGE(0x07, 0x27) },    /* Keyboard '0' and ')' */
++//    { KEY_BACK,         HID_USAGE(0x07, 0x2A) },    /* Keyboard Backspace */
++//    { KEY_7,            HID_USAGE(0x07, 0x24) },    /* Keyboard '7' and '&' */
++//    { KEY_8,            HID_USAGE(0x07, 0x25) },    /* Keyboard '8' and '*' */
++//    { KEY_9,            HID_USAGE(0x07, 0x26) },    /* Keyboard '9' and '(' */
++//    { KEY_4,            HID_USAGE(0x07, 0x21) },    /* Keyboard '4' and '$' */
++//    { KEY_5,            HID_USAGE(0x07, 0x22) },    /* Keyboard '5' and '%' */
++//    { KEY_6,            HID_USAGE(0x07, 0x23) },    /* Keyboard '6' and '^' */
++//    { KEY_1,            HID_USAGE(0x07, 0x1E) },    /* Keyboard '1' and '!' */
++//    { KEY_2,            HID_USAGE(0x07, 0x1F) },    /* Keyboard '2' and '@' */
++//    { KEY_3,            HID_USAGE(0x07, 0x20) },    /* Keyboard '3' and '#' */
++//    { KEY_AC_SEARCH,    HID_USAGE(0x0C, 0x221) },   /* Consumer Control: AC Search */
++//    { KEY_VOL_DOWN,     HID_USAGE(0x0C, 0xEA) },    /* Consumer Control: Volume Decrement */
++//    { KEY_CH_DOWN,      HID_USAGE(0x07, 0x4E) },    /* Keyboard Page Down */
++//    { KEY_VOL_UP,       HID_USAGE(0x0C, 0xE9) },    /* Consumer Control: Volume Increment */
++//    { KEY_CH_UP,        HID_USAGE(0x07, 0x4B) },    /* Keyboard Page Up */
++//    { KEY_DOWN,         HID_USAGE(0x07, 0x51) },    /* Keyboard Down Arrow */
++//    { KEY_LEFT,         HID_USAGE(0x07, 0x50) },    /* Keyboard Left Arrow */
++//    { KEY_OK,           HID_USAGE(0x07, 0x28) },    /* Keyboard Enter */
++//    { KEY_RIGHT,        HID_USAGE(0x07, 0x4F) },    /* Keyboard Right Arrow */
++//    { KEY_UP,           HID_USAGE(0x07, 0x52) },    /* Keyboard Up Arrow */
++//    { KEY_PLAY_PAUSE,   HID_USAGE(0x0C, 0xCD) },    /* Consumer Control: Play/Pause */
++//    { KEY_PREV_TRACK,   HID_USAGE(0x0C, 0xB6) },    /* Consumer Control: Scan Prev Track */
++//    { KEY_NEXT_TRACK,   HID_USAGE(0x0C, 0xB5) },    /* Consumer Control: Scan Next Track */
++//    { KEY_STOP,         HID_USAGE(0x0C, 0xB7) },    /* Consumer Control: Stop */
++//    { KEY_MUTE,         HID_USAGE(0x07, 0x7F) },    /* Keyboard Mute */
++
++    { MOUSE_KEY_ID(0),  HID_USAGE(0x09, 0x01) },    /* Left Mouse Button */
++    { MOUSE_KEY_ID(1),  HID_USAGE(0x09, 0x02) },    /* Right Mouse Button */
++};
++
++const size_t g_sr3_hid_keymap_size = sizeof(g_sr3_hid_keymap) / sizeof(g_sr3_hid_keymap[0]);
++
++/*
++ * IR keymap (SIRC).
++ */
++const sr3_ir_keymap_t g_sr3_ir_keymap[] =
++{
++//    { KEY_0,            SR3_IR_SYMBOL( 9, 1) },    /* SIRC 0 */
++//    { KEY_7,            SR3_IR_SYMBOL( 6, 1) },    /* SIRC 7 */
++//    { KEY_8,            SR3_IR_SYMBOL( 7, 1) },    /* SIRC 8 */
++//    { KEY_9,            SR3_IR_SYMBOL( 8, 1) },    /* SIRC 9 */
++//    { KEY_4,            SR3_IR_SYMBOL( 3, 1) },    /* SIRC 4 */
++//    { KEY_5,            SR3_IR_SYMBOL( 4, 1) },    /* SIRC 5 */
++//    { KEY_6,            SR3_IR_SYMBOL( 5, 1) },    /* SIRC 6 */
++//    { KEY_1,            SR3_IR_SYMBOL( 0, 1) },    /* SIRC 1 */
++//    { KEY_2,            SR3_IR_SYMBOL( 1, 1) },    /* SIRC 2 */
++//    { KEY_3,            SR3_IR_SYMBOL( 2, 1) },    /* SIRC 3 */
++//	    { KEY_OK,           SR3_IR_SYMBOL(11, 1) },    /* SIRC Enter */
++    { KEY_VOL_DOWN,     SR3_IR_SYMBOL(19, 1) },    /* SIRC Volume Down */
++//    { KEY_CH_DOWN,      SR3_IR_SYMBOL(17, 1) },    /* SIRC Channel Down */
++    { KEY_VOL_UP,       SR3_IR_SYMBOL(18, 1) },    /* SIRC Volume Up */
++//    { KEY_CH_UP,        SR3_IR_SYMBOL(16, 1) },    /* SIRC Channel Up */
++//    { KEY_MUTE,         SR3_IR_SYMBOL(20, 1) },    /* SIRC Mute */
++//    { KEY_POWER,        SR3_IR_SYMBOL(21, 1) },    /* SIRC Power */
++};
++
++const size_t g_sr3_ir_keymap_size = sizeof(g_sr3_ir_keymap) / sizeof(g_sr3_ir_keymap[0]);
++
++/*
++ * Buzzer sound
++ */
++const sr3_buzzer_sound_t g_sr3_buzzer_sound_mild[] =
++{
++    {  20, 180 },
++    {  20, 180 },
++    {  20, 180 },
++    {   0, 400 },
++    {   0,   0 },
++};
++
++const sr3_buzzer_sound_t g_sr3_buzzer_sound_high[] =
++{
++    { 750, 250 },
++    { 250, 250 },
++    {   0, 750 },
++    { 750, 250 },
++    { 750, 250 },
++    { 750, 250 },
++    {   0, 750 },
++    { 250, 250 },
++    { 750, 250 },
++    { 250, 250 },
++    {   0, 750 },
++    { 750, 250 },
++    { 250, 250 },
++    { 250, 250 },
++    {   0, 750 },
++    { 250, 250 },
++    { 250, 250 },
++    {   0, 750 },
++    { 750, 250 },
++    { 250, 250 },
++    { 750, 250 },
++    { 250, 250 },
++    {   0, 750 },
++    {   0,   0 },
++};
++#else
++# error "CONFIG_BOARD_xxx is not defined!"
++#endif
+diff --git a/Source/Configuration/sr3_config_hid.h b/Source/Configuration/sr3_config_hid.h
+index bd0fcc7..b780c27 100644
+--- a/Source/Configuration/sr3_config_hid.h
++++ b/Source/Configuration/sr3_config_hid.h
+@@ -62,34 +62,52 @@
+  * Names of the keys to simplify keymap creation.
+  * Keep names ordered by the Key ID. The keymap tables must have the same order.
+  */
+-#define KEY_MEDIA       KEYBOARD_KEY_ID(0, 0)
+-#define KEY_0           KEYBOARD_KEY_ID(0, 1)
+-#define KEY_BACK        KEYBOARD_KEY_ID(0, 2)
+-#define KEY_7           KEYBOARD_KEY_ID(0, 3)
+-#define KEY_8           KEYBOARD_KEY_ID(0, 4)
+-#define KEY_9           KEYBOARD_KEY_ID(0, 5)
+-#define KEY_4           KEYBOARD_KEY_ID(0, 6)
+-#define KEY_5           KEYBOARD_KEY_ID(0, 7)
+-#define KEY_6           KEYBOARD_KEY_ID(1, 0)
+-#define KEY_1           KEYBOARD_KEY_ID(1, 1)
+-#define KEY_2           KEYBOARD_KEY_ID(1, 2)
+-#define KEY_3           KEYBOARD_KEY_ID(1, 3)
+-#define KEY_AC_SEARCH   KEYBOARD_KEY_ID(2, 0)
+-#define KEY_VOL_DOWN    KEYBOARD_KEY_ID(2, 2)
+-#define KEY_CH_DOWN     KEYBOARD_KEY_ID(2, 4)
+-#define KEY_VOL_UP      KEYBOARD_KEY_ID(2, 5)
+-#define KEY_CH_UP       KEYBOARD_KEY_ID(2, 7)
+-#define KEY_DOWN        KEYBOARD_KEY_ID(3, 1)
+-#define KEY_LEFT        KEYBOARD_KEY_ID(3, 3)
+-#define KEY_OK          KEYBOARD_KEY_ID(3, 4)
+-#define KEY_RIGHT       KEYBOARD_KEY_ID(3, 5)
+-#define KEY_UP          KEYBOARD_KEY_ID(4, 0)
+-#define KEY_PLAY_PAUSE  KEYBOARD_KEY_ID(4, 2)
+-#define KEY_PREV_TRACK  KEYBOARD_KEY_ID(4, 3)
+-#define KEY_NEXT_TRACK  KEYBOARD_KEY_ID(4, 4)
+-#define KEY_STOP        KEYBOARD_KEY_ID(4, 5)
+-#define KEY_MUTE        KEYBOARD_KEY_ID(4, 6)
+-#define KEY_POWER       KEYBOARD_KEY_ID(4, 7)
++
++#define KEY_OK_NO_SEND  KEYBOARD_KEY_ID(0, 0)
++#define KEY_UP          KEYBOARD_KEY_ID(1, 0)
++#define KEY_DOWN        KEYBOARD_KEY_ID(2, 0)
++#define KEY_LEFT        KEYBOARD_KEY_ID(3, 0)
++#define KEY_RIGHT       KEYBOARD_KEY_ID(4, 0)
++#define KEY_VOL_DOWN    KEYBOARD_KEY_ID(5, 0)
++#define KEY_VOL_UP      KEYBOARD_KEY_ID(6, 0)
++#define KEY_PLAY_PAUSE  KEYBOARD_KEY_ID(7, 0)
++#define KEY_AC_SEARCH   KEYBOARD_KEY_ID(8, 0)
++#define KEY_HOME        KEYBOARD_KEY_ID(9, 0)
++#define KEY_BACK        KEYBOARD_KEY_ID(10, 0)
++#define KEY_OK          KEYBOARD_KEY_ID(15, 0)
++//#define KEY_4           KEYBOARD_KEY_ID(11, 0) // Airmouse
++
++//#define KEY_PLAY_PAUSE  KEYBOARD_KEY_ID(8, 0)
++//#define KEY_2           KEYBOARD_KEY_ID(9, 0)
++
++//#define KEY_MEDIA       KEYBOARD_KEY_ID(0, 0)
++//#define KEY_0           KEYBOARD_KEY_ID(0, 1)
++//#define KEY_BACK        KEYBOARD_KEY_ID(0, 2)
++//#define KEY_7           KEYBOARD_KEY_ID(0, 3)
++//#define KEY_8           KEYBOARD_KEY_ID(0, 4)
++//#define KEY_9           KEYBOARD_KEY_ID(0, 5)
++//#define KEY_4           KEYBOARD_KEY_ID(0, 6)
++//#define KEY_5           KEYBOARD_KEY_ID(0, 7)
++//#define KEY_6           KEYBOARD_KEY_ID(1, 0)
++//#define KEY_1           KEYBOARD_KEY_ID(1, 1)
++//#define KEY_2           KEYBOARD_KEY_ID(1, 2)
++//#define KEY_3           KEYBOARD_KEY_ID(1, 3)
++//#define KEY_AC_SEARCH   KEYBOARD_KEY_ID(2, 0)
++//#define KEY_VOL_DOWN    KEYBOARD_KEY_ID(2, 2)
++//#define KEY_CH_DOWN     KEYBOARD_KEY_ID(2, 4)
++//#define KEY_VOL_UP      KEYBOARD_KEY_ID(2, 5)
++//#define KEY_CH_UP       KEYBOARD_KEY_ID(2, 7)
++//#define KEY_DOWN        KEYBOARD_KEY_ID(3, 1)
++//#define KEY_LEFT        KEYBOARD_KEY_ID(3, 3)
++//#define KEY_OK          KEYBOARD_KEY_ID(3, 4)
++//#define KEY_RIGHT       KEYBOARD_KEY_ID(3, 5)
++//#define KEY_UP          KEYBOARD_KEY_ID(4, 0)
++//#define KEY_PLAY_PAUSE  KEYBOARD_KEY_ID(4, 2)
++//#define KEY_PREV_TRACK  KEYBOARD_KEY_ID(4, 3)
++//#define KEY_NEXT_TRACK  KEYBOARD_KEY_ID(4, 4)
++//#define KEY_STOP        KEYBOARD_KEY_ID(4, 5)
++//#define KEY_MUTE        KEYBOARD_KEY_ID(4, 6)
++//#define KEY_POWER       KEYBOARD_KEY_ID(4, 7)
+ 
+ #endif
+ 
+-- 
+2.17.1.windows.2
+
+
+From 9042662a2cfc12905dee7df8983c39908ed8fd4f Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 16 Jul 2018 14:34:04 +0200
+Subject: [PATCH 05/20] Updated target configuration to match Newt Dev build HW
+
+---
+ .../sr3_config_nrf52832_pca20023.h            | 84 +++++++++++--------
+ 1 file changed, 50 insertions(+), 34 deletions(-)
+
+diff --git a/Source/Configuration/sr3_config_nrf52832_pca20023.h b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+index 98a4671..46e1fb4 100644
+--- a/Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -641,7 +641,7 @@
+ // <o> Gyroscope Mode Toggle Key ID <0x00-0xFF>
+ // <i> Select the key that toggles the gyroscope mode.
+ /**@brief Gyroscope Mode Toggle Key ID <0x00-0xFF> */
+-#define CONFIG_GYRO_MODE_KEY_ID 0x26
++#define CONFIG_GYRO_MODE_KEY_ID 0xB0
+ 
+ // <o> Left Click Key ID <0x00-0xFF>
+ // <i> Select the key that acts as the left mouse button in the gyroscope mode.
+@@ -1166,15 +1166,18 @@
+ // </h>
+ // </e>
+ 
++// Use NFC pins as GPIOs
++#define CONFIG_NFCT_PINS_AS_GPIOS 1
++
+ // <e> Enable NFC Tag
+ // <i> Enables NFC Tag subsystem.
+ /**@brief Enable NFC Tag */
+-#define CONFIG_NFC_ENABLED 1
++#define CONFIG_NFC_ENABLED 0
+ 
+ // <e> Provide tap-to-pair tag
+ // <i> If this option is enabled, the tag will present an NFC pairing message when the device is bondable.
+ /**@brief NFC: Provide tap-to-pair tag */
+-#define CONFIG_NFC_PAIRING_TAG 1
++#define CONFIG_NFC_PAIRING_TAG 0
+ 
+ // <q> Use full pairing message that supports both Bluetooth Classic and LE.
+ /**@brief NFC: Use full pairing message that supports both Bluetooth Classic and LE. */
+@@ -1184,12 +1187,12 @@
+ // <q> Provide text tag
+ // <i> If this option is enabled, the tag will present textual information about the firmware.
+ /**@brief NFC: Provide text tag */
+-#define CONFIG_NFC_TEXT_TAG 1
++#define CONFIG_NFC_TEXT_TAG 0
+ 
+ // <q> Use NFC as a Wakeup Source
+ // <i> Enables system wakeup on NFC tag read attempt.
+ /**@brief NFC: Use NFC as a Wakeup Source */
+-#define CONFIG_NFC_WAKEUP_SOURCE 1
++#define CONFIG_NFC_WAKEUP_SOURCE 0
+ 
+ // <h> Logging Options
+ // <i> This section configures module-specific logging options.
+@@ -1208,20 +1211,27 @@
+ // <e> Enable Touchpad Support
+ // <i> Enable the touchpad subsystem.
+ /**@brief Enable Touchpad Support */
+-#define CONFIG_TOUCHPAD_ENABLED 0
++#define CONFIG_TOUCHPAD_ENABLED 1
++
++#if (CONFIG_TOUCHPAD_ENABLED)
++// CONFIG_TOUCHPAD_DRV == 1 Synaptic
++// CONFIG_TOUCHPAD_DRV == 2 Micron MTCH6102
++#define CONFIG_TOUCHPAD_DRV 2
++#endif
++
+ 
+ // <o> TWI Bus
+ // <i> Select the TWI Bus that is used to communicate with the touchpad.
+ //  <0=>Primary
+ //  <1=>Secondary
+ /**@brief Touchpad TWI Bus */
+-#define CONFIG_TOUCHPAD_TWI_BUS 0
++#define CONFIG_TOUCHPAD_TWI_BUS 1
+ 
+ // <o> Touchpad Polling Interval [ms] <1-100>
+ // <i> Configure the touchpad polling interval.
+ // <i> Note: Polling interval shorter than 5 ms might cause congestion on the I2C bus if other modules using the same bus are enabled.
+ /**@brief Touchpad Polling Interval [ms] <1-100> */
+-#define CONFIG_TOUCHPAD_POLL_INTERVAL 15
++#define CONFIG_TOUCHPAD_POLL_INTERVAL 40
+ 
+ // <h> Logging Options
+ // <i> This section configures module-specific logging options.
+@@ -1501,12 +1511,12 @@
+ // <s.20> Device Name
+ // <i> UTF-8 string representing the name of the device.
+ /**@brief Device Name */
+-#define CONFIG_DEVICE_NAME "Smart Remote 3"
++#define CONFIG_DEVICE_NAME "Newt"
+ 
+ // <s> Manufacturer Name
+ // <i> UTF-8 string representing the name of the manufacturer of the device.
+ /**@brief Manufacturer Name */
+-#define CONFIG_MANUFACTURER_NAME "Nordic Semiconductor"
++#define CONFIG_MANUFACTURER_NAME "FB"
+ 
+ // <s> Firmware Revision
+ // <i> UTF-8 string representing the firmware revision for the firmware within the device.
+@@ -1516,7 +1526,7 @@
+ // <s> Hardware Revision
+ // <i> UTF-8 string representing the hardware revision for the hardware within the device.
+ /**@brief Hardware Revision */
+-#define CONFIG_HARDWARE_REVISION "PCA20023"
++#define CONFIG_HARDWARE_REVISION "EVT1"
+ 
+ // <s> Serial Number
+ // <i> UTF-8 string representing the serial number of the particular instance of the device.
+@@ -1561,7 +1571,7 @@
+ // <o> Advertising Time-out [s] <1-255>
+ // <i> Set the time after which the remote is automatically put into deep sleep mode if it cannot connect to the host.
+ /**@brief Advertising Time-out [s] <1-255> */
+-#define CONFIG_ADV_TIMEOUT 5
++#define CONFIG_ADV_TIMEOUT 60
+ 
+ // <o> Advertising Interval [ms] <20-10240>
+ // <i> Configure the interval between advertising packets in the Advertising mode.
+@@ -1615,7 +1625,7 @@
+ // <o> First Connection Parameter Update Delay [ms] <10-30000>
+ // <i> Set the time between establishing the connection and the first Connection Parameter Update request.
+ /**@brief First Connection Parameter Update Delay [ms] <10-30000> */
+-#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 10
++#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 20
+ 
+ // <o> Next Connection Parameter Update Delay [s] <1-300>
+ // <i> Set the time between subsequent Connection Parameter Update requests.
+@@ -1695,7 +1705,7 @@
+ // <q> Allow Legacy Pairing
+ // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
+ /**@brief Allow Legacy Pairing */
+-#define CONFIG_SEC_LEGACY_PAIRING 1
++#define CONFIG_SEC_LEGACY_PAIRING 0
+ 
+ // <q> Allow LESC Pairing
+ // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
+@@ -1741,7 +1751,7 @@
+ 
+ // <q> Signal support for 2 Mbit/s PHY
+ /**@brief Signal support for 2 Mbit/s PHY */
+-#define CONFIG_PHY_TX_2MBPS 1
++#define CONFIG_PHY_TX_2MBPS 0
+ // </h>
+ 
+ // <h> RX PHY Selection
+@@ -1751,7 +1761,7 @@
+ 
+ // <q> Signal support for 2 Mbit/s PHY
+ /**@brief Signal support for 2 Mbit/s PHY */
+-#define CONFIG_PHY_RX_2MBPS 1
++#define CONFIG_PHY_RX_2MBPS 0
+ // </h>
+ // </h>
+ 
+@@ -1924,7 +1934,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 0 Pin */
+-#define CONFIG_IO_KEY_COL_0 0x0C
++#define CONFIG_IO_KEY_COL_0 29//16
+ 
+ // <o> Column 1 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1933,7 +1943,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 1 Pin */
+-#define CONFIG_IO_KEY_COL_1 0x1C
++#define CONFIG_IO_KEY_COL_1 0xFFFFFFFF
+ 
+ // <o> Column 2 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1942,7 +1952,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 2 Pin */
+-#define CONFIG_IO_KEY_COL_2 0x08
++#define CONFIG_IO_KEY_COL_2 0xFFFFFFFF
+ 
+ // <o> Column 3 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1951,7 +1961,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 3 Pin */
+-#define CONFIG_IO_KEY_COL_3 0x0B
++#define CONFIG_IO_KEY_COL_3 0xFFFFFFFF
+ 
+ // <o> Column 4 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1960,7 +1970,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 4 Pin */
+-#define CONFIG_IO_KEY_COL_4 0x03
++#define CONFIG_IO_KEY_COL_4 0xFFFFFFFF
+ 
+ // <o> Column 5 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1969,7 +1979,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 5 Pin */
+-#define CONFIG_IO_KEY_COL_5 0x1B
++#define CONFIG_IO_KEY_COL_5 0xFFFFFFFF
+ 
+ // <o> Column 6 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1978,7 +1988,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 6 Pin */
+-#define CONFIG_IO_KEY_COL_6 0x14
++#define CONFIG_IO_KEY_COL_6 0xFFFFFFFF
+ 
+ // <o> Column 7 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1987,7 +1997,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Column 7 Pin */
+-#define CONFIG_IO_KEY_COL_7 0x19
++#define CONFIG_IO_KEY_COL_7 0xFFFFFFFF
+ 
+ // <o> Row 0 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -1996,7 +2006,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 0 Pin */
+-#define CONFIG_IO_KEY_ROW_0 0x10
++#define CONFIG_IO_KEY_ROW_0 3
+ 
+ // <o> Row 1 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2005,7 +2015,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 1 Pin */
+-#define CONFIG_IO_KEY_ROW_1 0x11
++#define CONFIG_IO_KEY_ROW_1 8
+ 
+ // <o> Row 2 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2014,7 +2024,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 2 Pin */
+-#define CONFIG_IO_KEY_ROW_2 0x12
++#define CONFIG_IO_KEY_ROW_2 11
+ 
+ // <o> Row 3 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2023,7 +2033,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 3 Pin */
+-#define CONFIG_IO_KEY_ROW_3 0x1D
++#define CONFIG_IO_KEY_ROW_3 12
+ 
+ // <o> Row 4 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2032,7 +2042,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 4 Pin */
+-#define CONFIG_IO_KEY_ROW_4 0x13
++#define CONFIG_IO_KEY_ROW_4 16
+ 
+ // <o> Row 5 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2041,7 +2051,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 5 Pin */
+-#define CONFIG_IO_KEY_ROW_5 0xFFFFFFFF
++#define CONFIG_IO_KEY_ROW_5 17
+ 
+ // <o> Row 6 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2050,7 +2060,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 6 Pin */
+-#define CONFIG_IO_KEY_ROW_6 0xFFFFFFFF
++#define CONFIG_IO_KEY_ROW_6 18
+ 
+ // <o> Row 7 Pin
+ //  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+@@ -2058,8 +2068,14 @@
+ //  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+-/**@brief Matrix Keyboard: Row 7 Pin */
+-#define CONFIG_IO_KEY_ROW_7 0xFFFFFFFF
++/**@brief Matrix Keyboard: Row Pin */
++#define CONFIG_IO_KEY_ROW_7 19
++
++#define CONFIG_IO_KEY_ROW_8 20
++#define CONFIG_IO_KEY_ROW_9 25
++#define CONFIG_IO_KEY_ROW_10 27
++#define CONFIG_IO_KEY_ROW_11 28
++//#define CONFIG_IO_KEY_ROW_12 4
+ // </h>
+ 
+ // <h> LEDs
+@@ -2328,7 +2344,7 @@
+ // <o> Event Pool size <4-254>
+ // <i> Specify how many events can be simultaneously queued in the Event Bus.
+ /**@brief Event Pool size <4-254> */
+-#define CONFIG_EVENT_POOL_SIZE 8
++#define CONFIG_EVENT_POOL_SIZE 16
+ 
+ // <q> Force Event Bus Error Checking
+ // <i> By default, errors that appear during non-essential event handling are ignored.
+-- 
+2.17.1.windows.2
+
+
+From 882663dbd711265769d924d5509ee227005f0fa6 Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 16 Jul 2018 15:31:34 +0200
+Subject: [PATCH 06/20] Added driver for Microchip touch pad MTCH6102
+
+---
+ .../sr3_config_nrf52832_pca20023.h            |   2 +-
+ Source/Drivers/drv_touchpad_mtch6102.c        | 486 ++++++++++++++++++
+ 2 files changed, 487 insertions(+), 1 deletion(-)
+ create mode 100644 Source/Drivers/drv_touchpad_mtch6102.c
+
+diff --git a/Source/Configuration/sr3_config_nrf52832_pca20023.h b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+index 46e1fb4..512d5b5 100644
+--- a/Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -1215,7 +1215,7 @@
+ 
+ #if (CONFIG_TOUCHPAD_ENABLED)
+ // CONFIG_TOUCHPAD_DRV == 1 Synaptic
+-// CONFIG_TOUCHPAD_DRV == 2 Micron MTCH6102
++// CONFIG_TOUCHPAD_DRV == 2 Microchip MTCH6102
+ #define CONFIG_TOUCHPAD_DRV 2
+ #endif
+ 
+diff --git a/Source/Drivers/drv_touchpad_mtch6102.c b/Source/Drivers/drv_touchpad_mtch6102.c
+new file mode 100644
+index 0000000..a7d7af1
+--- /dev/null
++++ b/Source/Drivers/drv_touchpad_mtch6102.c
+@@ -0,0 +1,486 @@
++#include <stdbool.h>
++#include <stdint.h>
++
++#include "nrf.h"
++#include "arm_math.h"
++#include "nordic_common.h"
++#include "nrf_atomic.h"
++#include "nrf_assert.h"
++#include "nrf_gpio.h"
++#include "app_debug.h"
++#include "app_error.h"
++#include "app_gpiote.h"
++
++#include "drv_touchpad.h"
++
++#include "twi_common.h"
++#include "resources.h"
++
++#define CONFIG_TOUCHPAD_ENABLED 1
++#define CONFIG_TOUCHPAD_DRV 2
++
++#if CONFIG_TOUCHPAD_ENABLED && (CONFIG_TOUCHPAD_DRV == 2)
++
++#define NRF_LOG_MODULE_NAME drv_touchpad_mtch6102
++#define NRF_LOG_LEVEL CONFIG_TOUCHPAD_DRV_LOG_LEVEL
++#include "nrf_log.h"
++NRF_LOG_MODULE_REGISTER();
++
++//#define PRODUCT_ID_BYTES       10U  //!< Number of bytes to be expected to be in the product ID.
++#define DEVICE_ADDRESS         0x25 //!< Device address on Two-wire bus.
++
++#define TP_GPIO_INT            9
++#define TP_GPIO_SYNC           10
++#define TP_GPIO_INPUTS         ( (1ul << TP_GPIO_INT) \
++                                   | (1ul << TP_GPIO_SYNC) )
++#define TP_GPIO_INTERRUPT      (1ul << TP_GPIO_INT)
++
++/**
++ * Touchpad register addresses
++ */
++#define TOUCHPAD_MODE_REG        0x05 //!< Device mode register.
++#define TOUCHPAD_TOUCH_DATA_BASE 0x10 //!< Touch RAM memory map base adr
++
++#define TOUCHPAD_MAX_X           576
++#define TOUCHPAD_MAX_Y           384
++
++#define TOUCHPAD_LOW_TH_X        ( TOUCHPAD_MAX_X / 4)
++#define TOUCHPAD_HIGH_TH_X       ( (3*TOUCHPAD_MAX_X) / 4)
++#define TOUCHPAD_LOW_TH_Y        ( TOUCHPAD_MAX_Y / 6)
++#define TOUCHPAD_HIGH_TH_Y       ( (4*TOUCHPAD_MAX_Y) / 6)
++
++//#define TOUCHPAD_PRODUCT_ID    0xA2 //!< Address of the product ID string.
++
++/**@brief Operational states */
++typedef enum {
++    SleepmodeNormal = 0x03, /**< Normal operation. */
++    SleepmodeSensorSleep = 0x00, /**< Low power operation. */
++} TouchpadSleepMode_t;
++
++
++//static ret_code_t touchpad_product_id_verify(void);
++//static ret_code_t touchpad_product_id_read(uint8_t *product_id, uint8_t product_id_bytes);
++
++static void touchpad_read_callback(ret_code_t status, void *p_user_data);
++static void touchpad_enable_disable_callback(ret_code_t status, void *p_user_data);
++static void touchpad_init_callback(ret_code_t status, void *p_user_data);
++
++static drv_touchpad_read_handler_t m_read_handler;
++//static uint8_t m_finger_state[3];
++//static uint8_t m_buffer[7];
++static uint8_t m_buffer[6];
++
++static int16_t prev_touch_x;
++static int16_t prev_touch_y;
++static uint8_t touch_readings;
++
++static drv_touchpad_data_t *p_user_data;
++
++/**@brief Flag protecting shared data used in read operation */
++static nrf_atomic_flag_t m_read_operation_active;
++
++static app_gpiote_user_id_t  m_touchpad_gpiote; //!< GPIOTE Handle.
++
++
++static uint8_t m_touch_data_base_reg = TOUCHPAD_TOUCH_DATA_BASE;
++
++static const nrf_twi_mngr_transfer_t m_touchpad_read_transfers[] = {
++NRF_TWI_MNGR_WRITE (DEVICE_ADDRESS, &m_touch_data_base_reg, 1, NRF_TWI_MNGR_NO_STOP),
++NRF_TWI_MNGR_READ (DEVICE_ADDRESS, &m_buffer[0], 6, 0), };
++
++static uint8_t m_touch_layout_conf[] = { 0x20, // Reg 0x20
++        0x9, 0x6, 0x6, 0x4F, 0x3F }; //
++
++static uint8_t m_touch_gesture_conf[] = { 0x37, //Reg 0x37
++        0x40, 0x40, 0x19, 0x19, 0x40, 0x32, 0x00, 0x0C, 0x20, 0x04, 0x2D, 0x2D };
++
++static uint8_t m_touch_filter_conf[] = { 0x31, //Reg 0x31
++        0x03, 0x01 };
++
++static const nrf_twi_mngr_transfer_t m_touchpad_init_transfers[] = {
++NRF_TWI_MNGR_WRITE (DEVICE_ADDRESS, m_touch_layout_conf, sizeof(m_touch_layout_conf), 0),
++NRF_TWI_MNGR_WRITE (DEVICE_ADDRESS, m_touch_gesture_conf, sizeof(m_touch_gesture_conf), 0),
++NRF_TWI_MNGR_WRITE (DEVICE_ADDRESS, m_touch_filter_conf, sizeof(m_touch_filter_conf), 0), };
++
++static const nrf_twi_mngr_transaction_t m_init_transaction = { .callback = touchpad_init_callback,
++        .p_user_data = NULL, .p_transfers = m_touchpad_init_transfers, .number_of_transfers =
++                ARRAY_SIZE(m_touchpad_init_transfers), .p_required_twi_cfg =
++                &g_twi_bus_config[CONFIG_TOUCHPAD_TWI_BUS] };
++
++static uint8_t m_enable_data[] = { TOUCHPAD_MODE_REG, SleepmodeNormal };
++static uint8_t m_disable_data[] = { TOUCHPAD_MODE_REG, SleepmodeSensorSleep };
++
++static const nrf_twi_mngr_transfer_t m_enable_transfers[] = {
++NRF_TWI_MNGR_WRITE (DEVICE_ADDRESS, m_enable_data, sizeof(m_enable_data), 0), };
++
++static const nrf_twi_mngr_transfer_t m_disable_transfers[] = {
++NRF_TWI_MNGR_WRITE (DEVICE_ADDRESS, m_disable_data, sizeof(m_disable_data), 0), };
++
++static const nrf_twi_mngr_transaction_t m_enable_transaction = { .callback =
++        touchpad_enable_disable_callback, .p_user_data = NULL, .p_transfers = m_enable_transfers,
++        .number_of_transfers = ARRAY_SIZE(m_enable_transfers), .p_required_twi_cfg =
++                &g_twi_bus_config[CONFIG_TOUCHPAD_TWI_BUS] };
++
++static const nrf_twi_mngr_transaction_t m_disable_transaction = { .callback =
++        touchpad_enable_disable_callback, .p_user_data = NULL, .p_transfers = m_disable_transfers,
++        .number_of_transfers = ARRAY_SIZE(m_disable_transfers), .p_required_twi_cfg =
++                &g_twi_bus_config[CONFIG_TOUCHPAD_TWI_BUS] };
++
++/**@brief Set desired configuration on given GPIOs. */
++static void drv_keyboard_gpio_cfg(uint32_t mask, uint32_t pin_cnf) {
++    unsigned int i = 8 * sizeof(mask);
++
++    while ((i--, mask != 0)) {
++        unsigned int n = __CLZ(mask);
++
++        i -= n;
++        mask <<= n + 1;
++
++        NRF_GPIO->PIN_CNF[i] = pin_cnf;
++    }
++
++    // Make sure that new confiuration is active.
++    __DSB();
++}
++
++static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
++    drv_touchpad_data_t *p_data = p_user_data;
++    //    static bool tap_is_held;
++    //    float       x32f;
++    //    float       y32f;
++    //    float       sqrtf;
++
++    if (status != NRF_SUCCESS) {
++        nrf_atomic_flag_clear(&m_read_operation_active);
++        m_read_handler(status, p_data);
++        return;
++    }
++
++    if (p_data->scroll > 0)
++        p_data->scroll--;
++    else if (p_data->scroll < 0)
++        p_data->scroll++;
++
++    if (p_data->pan > 0)
++        p_data->pan--;
++    else if (p_data->pan < 0)
++        p_data->pan++;
++
++    p_data->tap = false;
++
++
++#if 0
++    p_data->x = 0;
++    p_data->y = 0;
++
++    if (m_buffer[0] & 0x02) { // Gesture
++        uint8_t swipe_speed;
++        if (touch_readings <= 4) {
++            swipe_speed = 3;
++        }
++        else if (touch_readings <= 8) {
++            swipe_speed = 2;
++        }
++        else {
++            swipe_speed = 1;
++        }
++
++        if (m_buffer[4] == 0x10) {
++            NRF_LOG_INFO("***IGOR* Gesture Single click");
++            p_data->tap = true;
++        } else if (m_buffer[4] == 0x31) { //True Down
++            NRF_LOG_INFO("***IGOR* Gesture Left s=%u", swipe_speed);
++            p_data->x = -swipe_speed;
++        } else if (m_buffer[4] == 0x41) { //True Right
++            NRF_LOG_INFO("***IGOR* Gesture Down s=%u", swipe_speed);
++            p_data->y = swipe_speed;
++        } else if (m_buffer[4] == 0x51) { //True Up
++            NRF_LOG_INFO("***IGOR* Gesture Right s=%u", swipe_speed);
++            p_data->x = swipe_speed;
++        } else if (m_buffer[4] == 0x61) { //True Left
++            NRF_LOG_INFO("***IGOR* Gesture Up s=%u", swipe_speed);
++            p_data->y = -swipe_speed;
++        } else {
++            NRF_LOG_INFO("***IGOR* Other gesture");
++        }
++    }
++
++    if (m_buffer[0] & 0x01)  // Touch
++        touch_readings++;
++    else
++        touch_readings = 0;
++
++#else
++    if (m_buffer[0] & 0x02) { // Gesture
++        if (m_buffer[4] == 0x10) {
++            NRF_LOG_INFO("***IGOR* Gesture Single click");
++            //p_data->tap = true;
++        }
++        else if (m_buffer[4] == 0x11) {
++            //NRF_LOG_INFO("***IGOR* Gesture click & hold");
++        }
++        else if (m_buffer[4] == 0x20) {
++            NRF_LOG_INFO("***IGOR* Gesture Double click");
++        }
++        else if (m_buffer[4] == 0x31) {
++            //True Down
++            NRF_LOG_INFO("***IGOR* Gesture Left swipe");
++        }
++        else if (m_buffer[4] == 0x41 && touch_readings <= 6) {
++            //True Right
++            NRF_LOG_INFO("***IGOR* Gesture Down swipe tr=%u", touch_readings);
++//            int8_t diff = (10 - touch_readings);
++//            if (diff > 0)
++//                p_data->scroll = diff;
++//
++//            p_data->x = 0;
++//            p_data->y = 0;
++//            prev_touch_x = INT16_MAX;
++//            prev_touch_y = INT16_MAX;
++        }
++        else if (m_buffer[4] == 0x51) {
++            //True Up
++            NRF_LOG_INFO("***IGOR* Gesture Right swipe");
++        }
++        else if (m_buffer[4] == 0x61 && touch_readings <=6) {
++            //True Left
++            NRF_LOG_INFO("***IGOR* Gesture Up swipe tr=%u", touch_readings);
++//            int8_t diff = (10 - touch_readings) * 2;
++//            if (diff > 0)
++//                p_data->scroll = -diff;
++//
++//            p_data->x = 0;
++//            p_data->y = 0;
++//            prev_touch_x = INT16_MAX;
++//            prev_touch_y = INT16_MAX;
++        }
++        else {
++//            if (m_buffer[4] & 0x02) {
++//                NRF_LOG_INFO("***IGOR* Gesture swipe&hold %02x", m_buffer[4]);
++//            } else {
++//                NRF_LOG_INFO("***IGOR* Gesture unkown %02x", m_buffer[4]);
++//            }
++        }
++    }
++
++    if (m_buffer[0] & 0x01) { // Touch
++        int16_t x = (m_buffer[1] << 4) | (m_buffer[3] >> 4);
++        int16_t y = (m_buffer[2] << 4) | ((m_buffer[3] & 0xF0) >> 4);
++
++        touch_readings++;
++
++        if (touch_readings > 3) {
++            p_data->y = (x - prev_touch_x) / 5;
++            p_data->x = (prev_touch_y - y) / 4;
++        }
++        else {
++            p_data->y = 0;
++            p_data->x =0;
++
++            if (touch_readings > 1) {
++                prev_touch_x = ((touch_readings-1)*prev_touch_x + x)/touch_readings;
++                prev_touch_y = ((touch_readings-1)*prev_touch_y + y)/touch_readings;
++            }
++            else {
++                prev_touch_x = 0;
++                prev_touch_y = 0;
++            }
++        }
++
++        prev_touch_x = (3*prev_touch_x + x)/4;
++        prev_touch_y = (3*prev_touch_y + y)/4;
++
++        //    	x32f = (float) (x - p_data->x);
++        //    	arm_sqrt_f32(x32f * (x32f < 0 ? -1 : 1), &sqrtf);
++        //    	p_data->x = (int16_t)(x32f * sqrtf);
++
++        //    	y32f = (float) (y - p_data->y);
++        //    	arm_sqrt_f32(y32f * (y32f < 0 ? -1 : 1), &sqrtf);
++        //    	p_data->y = -(int16_t)(y32f * sqrtf);
++
++        //NRF_LOG_INFO("*IGOR* Touch x=%04x, y=%04x, b0=%02x", x, y, m_buffer[0]);
++    } else {
++        if (p_data->x > 10) {
++            p_data->x = p_data->x / 2;
++        } else if (p_data->x < -10) {
++            p_data->x = p_data->x / 2;
++        } else {
++            p_data->x = 0;
++
++            prev_touch_x = INT16_MAX;
++        }
++
++        if (p_data->y > 10) {
++            p_data->y = p_data->y / 2;
++        } else if (p_data->y < -10) {
++            p_data->y = p_data->y / 2;
++        } else {
++            p_data->y = 0;
++
++            prev_touch_y = INT16_MAX;
++        }
++
++        NRF_LOG_INFO("****IGOR* Touch End");
++        touch_readings = 0;
++    }
++#endif
++
++    if (m_buffer[0] & 0x04) { // Large Activation
++        NRF_LOG_INFO("****IGOR* Large activation");
++    }
++
++    nrf_atomic_flag_clear(&m_read_operation_active);
++    m_read_handler(status, p_data);
++}
++
++static void touchpad_enable_disable_callback(ret_code_t status, void *p_user_data) {
++    APP_ERROR_CHECK(status);
++}
++
++static void touchpad_init_callback(ret_code_t status, void *p_user_data) {
++    if (status != NRF_SUCCESS) {
++        NRF_LOG_INFO("*IGOR* touchpad_init_callback");
++    }
++    APP_ERROR_CHECK(status);
++}
++
++static void drv_touchpad_interrupt_handler(uint32_t const *p_event_pins_low_to_high,
++        uint32_t const *p_event_pins_high_to_low)
++{
++    //NRF_LOG_INFO("*IGOR********* Interrupt");
++    drv_touchpad_schedule_read(p_user_data);
++}
++
++uint16_t drv_touchpad_dpad_ok_clicked(void) {
++    NRF_LOG_INFO("*IGOR* x=%d, y=%d", prev_touch_x, prev_touch_y);
++    if (prev_touch_x == INT16_MAX && prev_touch_y == INT16_MAX) {
++        NRF_LOG_INFO("*IGOR* DPAD OK");
++        return KEY_OK;
++    }
++
++    if ((prev_touch_x <= TOUCHPAD_LOW_TH_X) &&
++            (prev_touch_y >= TOUCHPAD_LOW_TH_Y) && (prev_touch_y <= TOUCHPAD_HIGH_TH_Y)) {
++        NRF_LOG_INFO("*IGOR* DPAD UP");
++        return KEY_UP;
++    }
++    else if ((prev_touch_x >= TOUCHPAD_HIGH_TH_X) &&
++            (prev_touch_y >= TOUCHPAD_LOW_TH_Y) && (prev_touch_y <= TOUCHPAD_HIGH_TH_Y)) {
++        NRF_LOG_INFO("*IGOR* DPAD DOWN");
++        return KEY_DOWN;
++    }
++    else if ((prev_touch_y <= TOUCHPAD_LOW_TH_Y) &&
++            (prev_touch_x >= TOUCHPAD_LOW_TH_X) && (prev_touch_x <= TOUCHPAD_HIGH_TH_X)) {
++        NRF_LOG_INFO("*IGOR* DPAD RIGHT");
++        return KEY_RIGHT;
++    }
++    else if ((prev_touch_y >= TOUCHPAD_HIGH_TH_Y) &&
++            (prev_touch_x >= TOUCHPAD_LOW_TH_X) && (prev_touch_x <= TOUCHPAD_HIGH_TH_X)) {
++        NRF_LOG_INFO("*IGOR* DPAD LEFT");
++        return KEY_LEFT;
++    }
++
++    return KEY_OK;
++}
++
++ret_code_t drv_touchpad_init(drv_touchpad_read_handler_t read_handler, drv_touchpad_data_t *p_u_data) {
++    ret_code_t status;
++
++    p_user_data = p_u_data;
++
++    ASSERT(read_handler != NULL);
++
++    // Read and verify product ID.
++    //    status = touchpad_product_id_verify();
++    //    if (status != NRF_SUCCESS)
++    //    {
++    //        return status;
++    //    }
++
++    prev_touch_x = INT16_MAX;
++    prev_touch_y = INT16_MAX;
++    touch_readings = 0;
++
++    uint32_t low_to_high_mask = TP_GPIO_INTERRUPT;
++    uint32_t high_to_low_mask = TP_GPIO_INTERRUPT;
++
++    status = app_gpiote_user_register(&m_touchpad_gpiote,
++            &low_to_high_mask,
++            &high_to_low_mask,
++            drv_touchpad_interrupt_handler);
++    if (status != NRF_SUCCESS)
++    {
++        NRF_LOG_INFO("*IGOR* Interrupt init error");
++        return status;
++    }
++
++    // Configure TP GPIOs.
++    drv_keyboard_gpio_cfg(TP_GPIO_INPUTS,
++            (GPIO_PIN_CNF_SENSE_Disabled << GPIO_PIN_CNF_SENSE_Pos)
++            | (GPIO_PIN_CNF_DRIVE_S0S1 << GPIO_PIN_CNF_DRIVE_Pos)
++            | (GPIO_PIN_CNF_PULL_Disabled << GPIO_PIN_CNF_PULL_Pos)
++            | (GPIO_PIN_CNF_DIR_Input << GPIO_PIN_CNF_DIR_Pos)
++            | (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos));
++
++    nrf_atomic_flag_clear(&m_read_operation_active);
++    m_read_handler = read_handler;
++
++    status = twi_schedule(&m_init_transaction);
++    if (status != NRF_SUCCESS) {
++        NRF_LOG_INFO("*IGOR* TP init err");
++    }
++
++    return drv_touchpad_disable();
++}
++
++ret_code_t drv_touchpad_enable(void) {
++    NRF_LOG_INFO("*IGOR* TP_enable");
++    ret_code_t status;
++
++    // Disable GPIOTE sensing.
++    status = app_gpiote_user_enable(m_touchpad_gpiote);
++    if (status != NRF_SUCCESS)
++    {
++        return status;
++    }
++    return twi_schedule(&m_enable_transaction);
++}
++
++ret_code_t drv_touchpad_disable(void) {
++    NRF_LOG_INFO("*IGOR* TP_disable");
++    ret_code_t status;
++
++    // Disable GPIOTE sensing.
++    status = app_gpiote_user_disable(m_touchpad_gpiote);
++    if (status != NRF_SUCCESS)
++    {
++        return status;
++    }
++    return twi_schedule(&m_disable_transaction);
++}
++
++ret_code_t drv_touchpad_schedule_read(drv_touchpad_data_t *p_data) {
++    static nrf_twi_mngr_transaction_t read_transaction;
++    ret_code_t status;
++
++    ASSERT(p_data != NULL);
++
++    if (nrf_atomic_flag_set_fetch(&m_read_operation_active)) {
++        return NRF_ERROR_BUSY;
++    }
++
++    read_transaction.callback = touchpad_read_callback;
++    read_transaction.p_user_data = p_data;
++    read_transaction.p_transfers = m_touchpad_read_transfers;
++    read_transaction.number_of_transfers = ARRAY_SIZE(m_touchpad_read_transfers);
++    read_transaction.p_required_twi_cfg = &g_twi_bus_config[CONFIG_TOUCHPAD_TWI_BUS];
++
++    status = twi_schedule(&read_transaction);
++    if (status != NRF_SUCCESS) {
++        nrf_atomic_flag_clear(&m_read_operation_active);
++    }
++
++    return status;
++}
++
++
++#endif /* CONFIG_TOUCHPAD_ENABLED */
+-- 
+2.17.1.windows.2
+
+
+From 1bb27bddcf244b5a479a6dfc5e5ffafdd84df163 Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 16 Jul 2018 15:34:05 +0200
+Subject: [PATCH 07/20] Add switched for new touch pad driver. Changed to
+ interrupt based driver.
+
+---
+ Projects/Firmware_nRF52832/armgcc/Makefile |  1 +
+ Source/Drivers/drv_touchpad.h              |  5 +-
+ Source/Drivers/drv_touchpad_synaptics.c    |  2 +-
+ Source/Modules/m_touchpad.c                | 86 ++++++++++++++++++++--
+ 4 files changed, 87 insertions(+), 7 deletions(-)
+
+diff --git a/Projects/Firmware_nRF52832/armgcc/Makefile b/Projects/Firmware_nRF52832/armgcc/Makefile
+index 4d8341b..7122a44 100644
+--- a/Projects/Firmware_nRF52832/armgcc/Makefile
++++ b/Projects/Firmware_nRF52832/armgcc/Makefile
+@@ -32,6 +32,7 @@ SRC_FILES += \
+   $(PROJ_DIR)/Source/Drivers/drv_keyboard_sx1509.c \
+   $(PROJ_DIR)/Source/Drivers/drv_leds_gpio.c \
+   $(PROJ_DIR)/Source/Drivers/drv_touchpad_synaptics.c \
++  $(PROJ_DIR)/Source/Drivers/drv_touchpad_mtch6102.c \
+   $(SDK_ROOT)/components/drivers_nrf/ble_flash/ble_flash.c \
+   $(SDK_ROOT)/components/drivers_nrf/clock/nrf_drv_clock.c \
+   $(SDK_ROOT)/components/drivers_nrf/common/nrf_drv_common.c \
+diff --git a/Source/Drivers/drv_touchpad.h b/Source/Drivers/drv_touchpad.h
+index ddafde2..84b1259 100644
+--- a/Source/Drivers/drv_touchpad.h
++++ b/Source/Drivers/drv_touchpad.h
+@@ -72,7 +72,7 @@ typedef void (*drv_touchpad_read_handler_t)(ret_code_t status, drv_touchpad_data
+  * @retval NRF_SUCCESS
+  * @retval NRF_ERROR_INTERNAL Bus error.
+  */
+-ret_code_t drv_touchpad_init(drv_touchpad_read_handler_t read_handler);
++ret_code_t drv_touchpad_init(drv_touchpad_read_handler_t read_handler, drv_touchpad_data_t *p_u_data);
+ 
+ /**@brief Enable touchpad to manage power consumption.
+  *
+@@ -93,6 +93,9 @@ ret_code_t drv_touchpad_disable(void);
+  */
+ ret_code_t drv_touchpad_schedule_read(drv_touchpad_data_t *p_data);
+ 
++
++uint16_t drv_touchpad_dpad_ok_clicked(void) ;
++
+ #endif /* __DRV_TOUCHPAD_H__ */
+ 
+ /** @} */
+diff --git a/Source/Drivers/drv_touchpad_synaptics.c b/Source/Drivers/drv_touchpad_synaptics.c
+index efeb24b..7aca738 100644
+--- a/Source/Drivers/drv_touchpad_synaptics.c
++++ b/Source/Drivers/drv_touchpad_synaptics.c
+@@ -54,7 +54,7 @@
+ #include "twi_common.h"
+ #include "resources.h"
+ 
+-#if CONFIG_TOUCHPAD_ENABLED
++#if CONFIG_TOUCHPAD_ENABLED && (CONFIG_TOUCHPAD_DRV == 1)
+ 
+ #define NRF_LOG_MODULE_NAME drv_touchpad
+ #define NRF_LOG_LEVEL CONFIG_TOUCHPAD_DRV_LOG_LEVEL
+diff --git a/Source/Modules/m_touchpad.c b/Source/Modules/m_touchpad.c
+index 9ae8acc..b2f944e 100644
+--- a/Source/Modules/m_touchpad.c
++++ b/Source/Modules/m_touchpad.c
+@@ -64,8 +64,9 @@
+ #include "nrf_log.h"
+ NRF_LOG_MODULE_REGISTER();
+ 
+-
++#if (CONFIG_TOUCHPAD_DRV == 1)
+ APP_TIMER_DEF                    (s_timer);
++#endif
+ static drv_touchpad_data_t       s_touchpad_data;
+ static bool                      s_touchpad_enabled;
+ static bool                      s_touchpad_tap_state;
+@@ -104,6 +105,57 @@ static void m_touchpad_read_handler(ret_code_t status, drv_touchpad_data_t *p_da
+         p_data->y       = 0;
+     }
+ 
++#if 0
++    if (p_data->x < 0) {
++        timestamp = app_timer_cnt_get();
++        int8_t count = -p_data->x;
++        while (count > 0) {
++            event_send(EVT_KEY_DOWN, KEY_LEFT, timestamp);
++            timestamp += 100;
++            event_send(EVT_KEY_UP, KEY_LEFT, timestamp);
++            timestamp += 100;
++
++            count --;
++        }
++    }
++    else if (p_data->x > 0) {
++        timestamp = app_timer_cnt_get();
++        int8_t count = p_data->x;
++        while (count > 0) {
++            event_send(EVT_KEY_DOWN, KEY_RIGHT, timestamp);
++            timestamp += 100;
++            event_send(EVT_KEY_UP, KEY_RIGHT, timestamp);
++            timestamp += 100;
++
++            count --;
++        }
++    }
++    else if (p_data->y < 0) {
++        timestamp = app_timer_cnt_get();
++        int8_t count = -p_data->y;
++        while (count > 0) {
++            event_send(EVT_KEY_DOWN, KEY_UP, timestamp);
++            timestamp += 100;
++            event_send(EVT_KEY_UP, KEY_UP, timestamp);
++            timestamp += 100;
++
++            count --;
++        }
++    }
++    else if (p_data->y > 0) {
++        timestamp = app_timer_cnt_get();
++        int8_t count = p_data->y;
++        while (count > 0) {
++            event_send(EVT_KEY_DOWN, KEY_DOWN, timestamp);
++            timestamp += 100;
++            event_send(EVT_KEY_UP, KEY_DOWN, timestamp);
++            timestamp += 100;
++
++            count --;
++        }
++    }
++#else
++
+     /* Send events */
+     if (p_data->x)
+     {
+@@ -139,8 +191,10 @@ static void m_touchpad_read_handler(ret_code_t status, drv_touchpad_data_t *p_da
+ 
+         s_touchpad_tap_state = p_data->tap;
+     }
++#endif
+ }
+ 
++#if (CONFIG_TOUCHPAD_DRV == 1)
+ static void m_touchpad_timer_handler(void * p_context)
+ {
+     ret_code_t status;
+@@ -155,19 +209,26 @@ static void m_touchpad_timer_handler(void * p_context)
+         APP_ERROR_CHECK(status);
+     }
+ }
++#endif
+ 
+ ret_code_t m_touchpad_init(void)
+ {
+     ret_code_t status;
+ 
++#if (CONFIG_TOUCHPAD_DRV == 1)
+     status = app_timer_create(&s_timer, APP_TIMER_MODE_REPEATED, m_touchpad_timer_handler);
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+     }
++#endif
+ 
+     // Touchpad init
++#if (CONFIG_TOUCHPAD_DRV == 1)
+     status = drv_touchpad_init(m_touchpad_read_handler);
++#elif (CONFIG_TOUCHPAD_DRV == 2)
++    status = drv_touchpad_init(m_touchpad_read_handler, &s_touchpad_data);
++#endif
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+@@ -183,16 +244,17 @@ ret_code_t m_touchpad_init(void)
+ 
+ ret_code_t m_touchpad_enable(void)
+ {
+-    ret_code_t status;
+-
+     ASSERT(s_touchpad_enabled == false);
+     NRF_LOG_INFO("Enabled");
+ 
++#if (CONFIG_TOUCHPAD_DRV == 1)
++    ret_code_t status;
+     status = app_timer_start(s_timer, APP_TIMER_TICKS(CONFIG_TOUCHPAD_POLL_INTERVAL), NULL);
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+     }
++#endif
+ 
+     s_touchpad_enabled = true;
+ 
+@@ -201,16 +263,17 @@ ret_code_t m_touchpad_enable(void)
+ 
+ ret_code_t m_touchpad_disable(void)
+ {
+-    ret_code_t status;
+-
+     ASSERT(s_touchpad_enabled == true);
+     NRF_LOG_INFO("Disabled");
+ 
++#if (CONFIG_TOUCHPAD_DRV == 1)
++    ret_code_t status;
+     status = app_timer_stop(s_timer);
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+     }
++#endif
+ 
+     s_touchpad_enabled = false;
+ 
+@@ -224,6 +287,19 @@ bool m_touchpad_event_handler(const event_t *p_event)
+         case EVT_SYSTEM_GYRO_STATE:
+             s_gyro_enabled = p_event->system.data;
+             break;
++        case EVT_KEY_DOWN:
++            if (p_event->key.id == KEY_OK_NO_SEND) {
++                uint32_t timestamp;
++                uint16_t key_id_to_send;
++                key_id_to_send = drv_touchpad_dpad_ok_clicked();
++
++                timestamp = app_timer_cnt_get();
++                event_send(EVT_KEY_DOWN, key_id_to_send, timestamp);
++
++                event_send(EVT_KEY_UP, key_id_to_send, timestamp + 10);
++
++            }
++            break;
+ 
+         default:
+             /* Ignore */
+-- 
+2.17.1.windows.2
+
+
+From db2c2df3fb1dd4b3703ba6eb8ac98e86e9e5ba65 Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 16 Jul 2018 15:35:27 +0200
+Subject: [PATCH 08/20] Updated the keyobard scanning to support direct GPIO
+ conenction
+
+---
+ Source/Drivers/drv_keyboard_matrix.c | 178 +++++++++++++++++----------
+ 1 file changed, 111 insertions(+), 67 deletions(-)
+
+diff --git a/Source/Drivers/drv_keyboard_matrix.c b/Source/Drivers/drv_keyboard_matrix.c
+index e88b868..47ac937 100644
+--- a/Source/Drivers/drv_keyboard_matrix.c
++++ b/Source/Drivers/drv_keyboard_matrix.c
+@@ -55,6 +55,11 @@
+ #include "resources.h"
+ #include "sr3_config.h"
+ 
++#if 0
++#define CONFIG_KBD_ENABLED 1
++#define CONFIG_KBD_DRIVER CONFIG_KBD_DRIVER_GPIO
++#endif
++
+ #if (CONFIG_KBD_ENABLED && (CONFIG_KBD_DRIVER == CONFIG_KBD_DRIVER_GPIO))
+ 
+ #define NRF_LOG_MODULE_NAME drv_keyboard
+@@ -67,8 +72,8 @@ NRF_LOG_MODULE_REGISTER();
+ 
+ #define KEYBOARD_MODE                   KEYBOARD_MODE_GPIOTE
+ 
+-#define KEYBOARD_NUM_OF_COLUMNS         8  //!< Number of columns in the keyboard matrix.
+-#define KEYBOARD_NUM_OF_ROWS            8  //!< Number of rows in the keyboard matrix.
++#define KEYBOARD_NUM_OF_COLUMNS         1  //!< Number of columns (out) in the keyboard matrix.
++#define KEYBOARD_NUM_OF_ROWS            12  //!< Number of rows (in) in the keyboard matrix.
+ #define KEYBOARD_IDLE_SCAN_CNT_MAX      3  //!< Idle scans before switching into interrupt mode
+ #define KEYBOARD_SELECT_TIME            3  //!< Time required to select given column and charge parasitic capacitances through switch resistance [us].
+ 
+@@ -88,13 +93,13 @@ NRF_LOG_MODULE_REGISTER();
+ #define KEYBOARD_MASK_COL_7  (IS_IO_VALID(CONFIG_IO_KEY_COL_7) ? (1ul << CONFIG_IO_KEY_COL_7) : 0)
+ 
+ #define KEYBOARD_MASK_COL_ALL ( KEYBOARD_MASK_COL_0 \
+-                              | KEYBOARD_MASK_COL_1 \
+-                              | KEYBOARD_MASK_COL_2 \
+-                              | KEYBOARD_MASK_COL_3 \
+-                              | KEYBOARD_MASK_COL_4 \
+-                              | KEYBOARD_MASK_COL_5 \
+-                              | KEYBOARD_MASK_COL_6 \
+-                              | KEYBOARD_MASK_COL_7 )
++        | KEYBOARD_MASK_COL_1 \
++        | KEYBOARD_MASK_COL_2 \
++        | KEYBOARD_MASK_COL_3 \
++        | KEYBOARD_MASK_COL_4 \
++        | KEYBOARD_MASK_COL_5 \
++        | KEYBOARD_MASK_COL_6 \
++        | KEYBOARD_MASK_COL_7 )
+ 
+ #define KEYBOARD_MASK_ROW_0  (IS_IO_VALID(CONFIG_IO_KEY_ROW_0) ? (1ul << CONFIG_IO_KEY_ROW_0) : 0)
+ #define KEYBOARD_MASK_ROW_1  (IS_IO_VALID(CONFIG_IO_KEY_ROW_1) ? (1ul << CONFIG_IO_KEY_ROW_1) : 0)
+@@ -104,15 +109,25 @@ NRF_LOG_MODULE_REGISTER();
+ #define KEYBOARD_MASK_ROW_5  (IS_IO_VALID(CONFIG_IO_KEY_ROW_5) ? (1ul << CONFIG_IO_KEY_ROW_5) : 0)
+ #define KEYBOARD_MASK_ROW_6  (IS_IO_VALID(CONFIG_IO_KEY_ROW_6) ? (1ul << CONFIG_IO_KEY_ROW_6) : 0)
+ #define KEYBOARD_MASK_ROW_7  (IS_IO_VALID(CONFIG_IO_KEY_ROW_7) ? (1ul << CONFIG_IO_KEY_ROW_7) : 0)
++#define KEYBOARD_MASK_ROW_8  (IS_IO_VALID(CONFIG_IO_KEY_ROW_8) ? (1ul << CONFIG_IO_KEY_ROW_8) : 0)
++#define KEYBOARD_MASK_ROW_9  (IS_IO_VALID(CONFIG_IO_KEY_ROW_9) ? (1ul << CONFIG_IO_KEY_ROW_9) : 0)
++#define KEYBOARD_MASK_ROW_10  (IS_IO_VALID(CONFIG_IO_KEY_ROW_10) ? (1ul << CONFIG_IO_KEY_ROW_10) : 0)
++#define KEYBOARD_MASK_ROW_11 (IS_IO_VALID(CONFIG_IO_KEY_ROW_11) ? (1ul << CONFIG_IO_KEY_ROW_11) : 0)
++//#define KEYBOARD_MASK_ROW_12 (IS_IO_VALID(CONFIG_IO_KEY_ROW_12) ? (1ul << CONFIG_IO_KEY_ROW_12) : 0)
++
+ 
+ #define KEYBOARD_MASK_ROW_ALL ( KEYBOARD_MASK_ROW_0 \
+-                              | KEYBOARD_MASK_ROW_1 \
+-                              | KEYBOARD_MASK_ROW_2 \
+-                              | KEYBOARD_MASK_ROW_3 \
+-                              | KEYBOARD_MASK_ROW_4 \
+-                              | KEYBOARD_MASK_ROW_5 \
+-                              | KEYBOARD_MASK_ROW_6 \
+-                              | KEYBOARD_MASK_ROW_7 )
++        | KEYBOARD_MASK_ROW_1 \
++        | KEYBOARD_MASK_ROW_2 \
++        | KEYBOARD_MASK_ROW_3 \
++        | KEYBOARD_MASK_ROW_4 \
++        | KEYBOARD_MASK_ROW_5 \
++        | KEYBOARD_MASK_ROW_6 \
++        | KEYBOARD_MASK_ROW_7 \
++        | KEYBOARD_MASK_ROW_8 \
++        | KEYBOARD_MASK_ROW_9 \
++        | KEYBOARD_MASK_ROW_10 \
++        | KEYBOARD_MASK_ROW_11 )
+ 
+ static drv_keyboard_event_handler_t   m_keyboard_event_handler;             //!< Keyboard event handler
+ static uint8_t                        m_key_vector[DRV_KEYBOARD_MAX_KEYS];  //!< vector holding currently pressed keys. Filled up from index 0.
+@@ -129,26 +144,31 @@ static uint8_t                        m_idle_scan_counter;                  //!<
+ /** Table describing relationship between column number and column pin */
+ static const uint8_t m_column_to_pin_map[KEYBOARD_NUM_OF_COLUMNS] =
+ {
+-    (uint8_t)(CONFIG_IO_KEY_COL_0),
+-    (uint8_t)(CONFIG_IO_KEY_COL_1),
+-    (uint8_t)(CONFIG_IO_KEY_COL_2),
+-    (uint8_t)(CONFIG_IO_KEY_COL_3),
+-    (uint8_t)(CONFIG_IO_KEY_COL_4),
+-    (uint8_t)(CONFIG_IO_KEY_COL_5),
+-    (uint8_t)(CONFIG_IO_KEY_COL_6),
+-    (uint8_t)(CONFIG_IO_KEY_COL_7),
++        (uint8_t)(CONFIG_IO_KEY_COL_0),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_1),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_2),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_3),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_4),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_5),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_6),
++        //    (uint8_t)(CONFIG_IO_KEY_COL_7),
+ };
+ 
+ static const uint8_t m_row_to_pin_map[KEYBOARD_NUM_OF_ROWS] =
+ {
+-    (uint8_t)(CONFIG_IO_KEY_ROW_0),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_1),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_2),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_3),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_4),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_5),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_6),
+-    (uint8_t)(CONFIG_IO_KEY_ROW_7),
++        (uint8_t)(CONFIG_IO_KEY_ROW_0),
++        (uint8_t)(CONFIG_IO_KEY_ROW_1),
++        (uint8_t)(CONFIG_IO_KEY_ROW_2),
++        (uint8_t)(CONFIG_IO_KEY_ROW_3),
++        (uint8_t)(CONFIG_IO_KEY_ROW_4),
++        (uint8_t)(CONFIG_IO_KEY_ROW_5),
++        (uint8_t)(CONFIG_IO_KEY_ROW_6),
++        (uint8_t)(CONFIG_IO_KEY_ROW_7),
++        (uint8_t)(CONFIG_IO_KEY_ROW_8),
++        (uint8_t)(CONFIG_IO_KEY_ROW_9),
++        (uint8_t)(CONFIG_IO_KEY_ROW_10),
++        (uint8_t)(CONFIG_IO_KEY_ROW_11),
++//        (uint8_t)(CONFIG_IO_KEY_ROW_12),
+ };
+ 
+ /**@brief Set desired configuration on given GPIOs. */
+@@ -175,28 +195,30 @@ static void drv_keyboard_gpio_init(void)
+ {
+     // Make sure that columns will drive 0 when they will be configured as outputs.
+     NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
++    __DSB();
+ 
+     // Configure Columns.
+     drv_keyboard_gpio_cfg(KEYBOARD_MASK_COL_ALL,
+-                          (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
+-                          (GPIO_PIN_CNF_DRIVE_D0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
+-                          (GPIO_PIN_CNF_PULL_Disabled    << GPIO_PIN_CNF_PULL_Pos)  |
+-                          (GPIO_PIN_CNF_DIR_Output       << GPIO_PIN_CNF_DIR_Pos)   |
+-                          (GPIO_PIN_CNF_INPUT_Disconnect << GPIO_PIN_CNF_INPUT_Pos) );
++            (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
++            (GPIO_PIN_CNF_DRIVE_D0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
++            (GPIO_PIN_CNF_PULL_Disabled    << GPIO_PIN_CNF_PULL_Pos)  |
++            (GPIO_PIN_CNF_DIR_Output       << GPIO_PIN_CNF_DIR_Pos)   |
++            (GPIO_PIN_CNF_INPUT_Disconnect << GPIO_PIN_CNF_INPUT_Pos) );
+ 
+     // Configure Rows.
+     drv_keyboard_gpio_cfg(KEYBOARD_MASK_ROW_ALL,
+-                          (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
+-                          (GPIO_PIN_CNF_DRIVE_S0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
+-                          (GPIO_PIN_CNF_PULL_Pulldown    << GPIO_PIN_CNF_PULL_Pos)  |
+-                          (GPIO_PIN_CNF_DIR_Input        << GPIO_PIN_CNF_DIR_Pos)   |
+-                          (GPIO_PIN_CNF_INPUT_Connect    << GPIO_PIN_CNF_INPUT_Pos) );
++            (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
++            (GPIO_PIN_CNF_DRIVE_S0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
++            (GPIO_PIN_CNF_PULL_Pullup    << GPIO_PIN_CNF_PULL_Pos)  |
++            (GPIO_PIN_CNF_DIR_Input        << GPIO_PIN_CNF_DIR_Pos)   |
++            (GPIO_PIN_CNF_INPUT_Connect    << GPIO_PIN_CNF_INPUT_Pos) );
++
+ }
+ 
+ /**@brief Extract rows state form gpio lines state. */
+-static uint8_t drv_keyboard_get_rows_state(uint32_t gpio_state)
++static uint16_t drv_keyboard_get_rows_state(uint32_t gpio_state)
+ {
+-    uint8_t rows_state = 0;
++    uint16_t rows_state = 0;
+     unsigned int i;
+ 
+     for (i = 0; i < KEYBOARD_NUM_OF_ROWS; i++)
+@@ -219,7 +241,8 @@ static uint8_t drv_keyboard_get_rows_state(uint32_t gpio_state)
+ static ret_code_t drv_keyboard_sense_enable(void)
+ {
+     // Drive "1" on all columns.
+-    NRF_GPIO->OUTSET = KEYBOARD_MASK_COL_ALL;
++    //NRF_GPIO->OUTSET = KEYBOARD_MASK_COL_ALL;
++    NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
+     __DSB();
+ 
+     // Enable GPIOTE sensing.
+@@ -269,8 +292,8 @@ static void drv_keyboard_scan_handler(uint8_t *p_pressed_keys, uint8_t num_of_pr
+             // Keep actively polling keyboard if it is in use.
+             NRF_LOG_DEBUG("%s(): Timer Enabled", __func__);
+             APP_ERROR_CHECK(app_timer_start(m_keyboard_timer,
+-                                        APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
+-                                        (void *)(drv_keyboard_scan_handler)));
++                    APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
++                    (void *)(drv_keyboard_scan_handler)));
+         }
+         else
+         {
+@@ -286,9 +309,11 @@ static void drv_keyboard_scan_handler(uint8_t *p_pressed_keys, uint8_t num_of_pr
+ static void drv_keyboard_scan(void* p_context)
+ {
+     drv_keyboard_event_handler_t callback = (drv_keyboard_event_handler_t)(p_context);
+-    uint8_t blocking_mask, rows_state[KEYBOARD_NUM_OF_COLUMNS], detected_keypresses_on_column;
++    uint8_t blocking_mask, detected_keypresses_on_column;
+     unsigned int column, row;
++    uint16_t rows_state[KEYBOARD_NUM_OF_COLUMNS];
+ 
++    /*
+     // Perform scan.
+     for (column = 0; column < KEYBOARD_NUM_OF_COLUMNS; column++)
+     {
+@@ -310,14 +335,28 @@ static void drv_keyboard_scan(void* p_context)
+ 
+         // Read GPIOs state.
+         gpio_state = NRF_GPIO->IN;
++        NRF_LOG_INFO("*IGOR* gpios=%08x", (unsigned int) gpio_state);
+ 
+         // Restore "0" on the selected column.
+         NRF_GPIO->OUTCLR = (1ul << pin);
+         __DSB();
+ 
+         // Save rows state for given column.
+-        rows_state[column] = drv_keyboard_get_rows_state(gpio_state);
++        //rows_state[column] = drv_keyboard_get_rows_state(gpio_state);
++        // TODO Remove. FIX to drive low, not needed on FB HW
++        rows_state[column] = drv_keyboard_get_rows_state(~gpio_state);
++
+     }
++     */
++
++    uint32_t gpio_state;
++
++    // Wait for column signal propagation.
++    nrf_delay_us(KEYBOARD_SELECT_TIME);
++
++    gpio_state = NRF_GPIO->IN;
++
++    rows_state[0] = drv_keyboard_get_rows_state(~gpio_state);
+ 
+     // Process results.
+     blocking_mask       = 0;
+@@ -332,18 +371,19 @@ static void drv_keyboard_scan(void* p_context)
+         }
+ 
+         detected_keypresses_on_column = 0;
+-        
++
+         for (row = 0; row < KEYBOARD_NUM_OF_ROWS; row++)
+         {
+             if ((rows_state[column] & (1ul << row)) != 0)
+             {
+                 detected_keypresses_on_column += 1;
+-                
++                //NRF_LOG_INFO("*IGOR* row nbr %u pressed", (unsigned int) row);
++
+                 if (m_key_vector_size < DRV_KEYBOARD_MAX_KEYS)
+                 {
+                     m_key_vector[m_key_vector_size++] = KEYBOARD_KEY_ID(row, column);
+                 }
+-                
++
+             }
+         }
+ 
+@@ -366,8 +406,9 @@ static void drv_keyboard_scan(void* p_context)
+ #if (KEYBOARD_MODE == KEYBOARD_MODE_GPIOTE)
+ /**@brief GPIOTE PORT interrupt handler.*/
+ static void drv_keyboard_interrupt_handler(uint32_t const *p_event_pins_low_to_high,
+-                                           uint32_t const *p_event_pins_high_to_low)
++        uint32_t const *p_event_pins_high_to_low)
+ {
++    //NRF_LOG_INFO("*IGOR* Interrupt");
+     if (m_keyboard_scan_enabled)
+     {
+         NRF_LOG_DEBUG("%s(): Interrupt", __func__);
+@@ -380,8 +421,8 @@ static void drv_keyboard_interrupt_handler(uint32_t const *p_event_pins_low_to_h
+ 
+         // Schedule keyboard_scan
+         APP_ERROR_CHECK(app_isched_event_put(&g_fg_scheduler,
+-                                             drv_keyboard_scan,
+-                                             (void *)(drv_keyboard_scan_handler)));
++                drv_keyboard_scan,
++                (void *)(drv_keyboard_scan_handler)));
+     }
+ }
+ #endif /* (KEYBOARD_MODE == KEYBOARD_MODE_GPIOTE) */
+@@ -403,15 +444,18 @@ ret_code_t drv_keyboard_init(drv_keyboard_event_handler_t keyboard_event_handler
+     {
+         return status;
+     }
+-
+ #if (KEYBOARD_MODE == KEYBOARD_MODE_GPIOTE)
+-    uint32_t low_to_high_mask = KEYBOARD_MASK_ROW_ALL;
+-    uint32_t high_to_low_mask = 0;
++
++    // TODO Remove. FIX to drive low, not needed on FB HW
++    //    uint32_t low_to_high_mask = KEYBOARD_MASK_ROW_ALL;
++    //    uint32_t high_to_low_mask = 0;
++    uint32_t low_to_high_mask = 0;
++    uint32_t high_to_low_mask = KEYBOARD_MASK_ROW_ALL;
+ 
+     status = app_gpiote_user_register(&m_keyboard_gpiote,
+-                                      &low_to_high_mask,
+-                                      &high_to_low_mask,
+-                                      drv_keyboard_interrupt_handler);
++            &low_to_high_mask,
++            &high_to_low_mask,
++            drv_keyboard_interrupt_handler);
+     if (status != NRF_SUCCESS)
+     {
+         return status;
+@@ -424,8 +468,8 @@ ret_code_t drv_keyboard_init(drv_keyboard_event_handler_t keyboard_event_handler
+ }
+ 
+ ret_code_t drv_keyboard_keys_get(uint8_t *p_pressed_keys,
+-                                 uint8_t *p_number_of_pressed_keys,
+-                                 bool *p_keys_blocked)
++        uint8_t *p_number_of_pressed_keys,
++        bool *p_keys_blocked)
+ {
+     if (m_keyboard_scan_enabled)
+     {
+@@ -453,13 +497,13 @@ ret_code_t drv_keyboard_enable(void)
+ #if (KEYBOARD_MODE == KEYBOARD_MODE_TIMER)
+     NRF_LOG_DEBUG("%s(): Timer Enabled", __func__);
+     return app_timer_start(m_keyboard_timer,
+-                           APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
+-                           (void *)m_keyboard_event_handler);
++            APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
++            (void *)m_keyboard_event_handler);
+ #else
+     NRF_LOG_DEBUG("%s(): Timer Enabled", __func__);
+     return app_timer_start(m_keyboard_timer,
+-                           APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
+-                           (void *)drv_keyboard_scan_handler);
++            APP_TIMER_TICKS(CONFIG_KBD_POLL_INTERVAL),
++            (void *)drv_keyboard_scan_handler);
+ #endif
+ }
+ 
+-- 
+2.17.1.windows.2
+
+
+From 884d0676130a6ece67ec5444a17a805031a2317c Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 16 Jul 2018 15:36:52 +0200
+Subject: [PATCH 09/20] Increased GPIOTE users to 3 due to interrupt driven
+ touch pad
+
+---
+ main.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/main.c b/main.c
+index 2d28e03..baa06b4 100644
+--- a/main.c
++++ b/main.c
+@@ -107,10 +107,11 @@
+  *
+  * drv_acc_lis3dh:                      1
+  * drv_keyboard_matrix:                 1
++ * drv_touch_pad                        1
+  * ------------------------------------
+- * TOTAL:                               2
++ * TOTAL:                               3
+  */
+-#define APP_GPIOTE_MAX_USERS            2
++#define APP_GPIOTE_MAX_USERS            3
+ 
+ // Verify SDK configuration.
+ STATIC_ASSERT(APP_TIMER_ENABLED);
+-- 
+2.17.1.windows.2
+
+
+From 8a520f2a784d7baf21ee052ee81c4ab207f11c5a Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Wed, 18 Jul 2018 09:00:02 +0200
+Subject: [PATCH 10/20] Fix for the PTT key
+
+---
+ Source/Configuration/sr3_config_nrf52832_pca20023.h | 6 ++++--
+ Source/Drivers/drv_keyboard_matrix.c                | 9 +++++----
+ 2 files changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/Source/Configuration/sr3_config_nrf52832_pca20023.h b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+index 512d5b5..4f7a1d8 100644
+--- a/Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -778,6 +778,8 @@
+ // <i> Select the key that functions as the equivalent of the Google Chrome voice search shortcut (Ctrl+Shift+.).
+ /**@brief Keyboard: Google Chrome Voice Search Shortcut Key ID <0x00-0xFF> */
+ #define CONFIG_GOOGLE_VOICE_SHORTCUT_KEY_ID 0x23
++
++
+ // </e>
+ // </h>
+ 
+@@ -2075,7 +2077,7 @@
+ #define CONFIG_IO_KEY_ROW_9 25
+ #define CONFIG_IO_KEY_ROW_10 27
+ #define CONFIG_IO_KEY_ROW_11 28
+-//#define CONFIG_IO_KEY_ROW_12 4
++#define CONFIG_IO_KEY_ROW_12 4
+ // </h>
+ 
+ // <h> LEDs
+@@ -2318,7 +2320,7 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Buzzer Control Pin */
+-#define CONFIG_IO_BUZZER 0x04
++#define CONFIG_IO_BUZZER 0xFFFFFFFF
+ // </h>
+ 
+ // <h> Advanced Options
+diff --git a/Source/Drivers/drv_keyboard_matrix.c b/Source/Drivers/drv_keyboard_matrix.c
+index 47ac937..2131014 100644
+--- a/Source/Drivers/drv_keyboard_matrix.c
++++ b/Source/Drivers/drv_keyboard_matrix.c
+@@ -73,7 +73,7 @@ NRF_LOG_MODULE_REGISTER();
+ #define KEYBOARD_MODE                   KEYBOARD_MODE_GPIOTE
+ 
+ #define KEYBOARD_NUM_OF_COLUMNS         1  //!< Number of columns (out) in the keyboard matrix.
+-#define KEYBOARD_NUM_OF_ROWS            12  //!< Number of rows (in) in the keyboard matrix.
++#define KEYBOARD_NUM_OF_ROWS            13  //!< Number of rows (in) in the keyboard matrix.
+ #define KEYBOARD_IDLE_SCAN_CNT_MAX      3  //!< Idle scans before switching into interrupt mode
+ #define KEYBOARD_SELECT_TIME            3  //!< Time required to select given column and charge parasitic capacitances through switch resistance [us].
+ 
+@@ -113,7 +113,7 @@ NRF_LOG_MODULE_REGISTER();
+ #define KEYBOARD_MASK_ROW_9  (IS_IO_VALID(CONFIG_IO_KEY_ROW_9) ? (1ul << CONFIG_IO_KEY_ROW_9) : 0)
+ #define KEYBOARD_MASK_ROW_10  (IS_IO_VALID(CONFIG_IO_KEY_ROW_10) ? (1ul << CONFIG_IO_KEY_ROW_10) : 0)
+ #define KEYBOARD_MASK_ROW_11 (IS_IO_VALID(CONFIG_IO_KEY_ROW_11) ? (1ul << CONFIG_IO_KEY_ROW_11) : 0)
+-//#define KEYBOARD_MASK_ROW_12 (IS_IO_VALID(CONFIG_IO_KEY_ROW_12) ? (1ul << CONFIG_IO_KEY_ROW_12) : 0)
++#define KEYBOARD_MASK_ROW_12 (IS_IO_VALID(CONFIG_IO_KEY_ROW_12) ? (1ul << CONFIG_IO_KEY_ROW_12) : 0)
+ 
+ 
+ #define KEYBOARD_MASK_ROW_ALL ( KEYBOARD_MASK_ROW_0 \
+@@ -127,7 +127,8 @@ NRF_LOG_MODULE_REGISTER();
+         | KEYBOARD_MASK_ROW_8 \
+         | KEYBOARD_MASK_ROW_9 \
+         | KEYBOARD_MASK_ROW_10 \
+-        | KEYBOARD_MASK_ROW_11 )
++        | KEYBOARD_MASK_ROW_11 \
++        | KEYBOARD_MASK_ROW_12 )
+ 
+ static drv_keyboard_event_handler_t   m_keyboard_event_handler;             //!< Keyboard event handler
+ static uint8_t                        m_key_vector[DRV_KEYBOARD_MAX_KEYS];  //!< vector holding currently pressed keys. Filled up from index 0.
+@@ -168,7 +169,7 @@ static const uint8_t m_row_to_pin_map[KEYBOARD_NUM_OF_ROWS] =
+         (uint8_t)(CONFIG_IO_KEY_ROW_9),
+         (uint8_t)(CONFIG_IO_KEY_ROW_10),
+         (uint8_t)(CONFIG_IO_KEY_ROW_11),
+-//        (uint8_t)(CONFIG_IO_KEY_ROW_12),
++        (uint8_t)(CONFIG_IO_KEY_ROW_12),
+ };
+ 
+ /**@brief Set desired configuration on given GPIOs. */
+-- 
+2.17.1.windows.2
+
+
+From 6ff2e42600c3e7ca67cc5fc1a32cc3ee82bbff82 Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 23 Jul 2018 09:50:51 +0200
+Subject: [PATCH 11/20] Added make dfu target in Makefile
+
+---
+ Projects/Firmware_nRF52832/armgcc/Makefile | 8 +++-----
+ 1 file changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/Projects/Firmware_nRF52832/armgcc/Makefile b/Projects/Firmware_nRF52832/armgcc/Makefile
+index 7122a44..d7a3c42 100644
+--- a/Projects/Firmware_nRF52832/armgcc/Makefile
++++ b/Projects/Firmware_nRF52832/armgcc/Makefile
+@@ -580,11 +580,6 @@ $(foreach target, $(TARGETS), $(call define_target, $(target)))
+ .PHONY: flash erase
+ 
+ # Flash the program
+-flash: $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex
+-	@echo Flashing: $<
+-	nrfjprog -f nrf52 --program $< --sectorerase
+-	nrfjprog -f nrf52 --reset
+-
+ flash:
+ 	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 3 --bootloader-version 2 --bl-settings-version 1 settings.hex
+ 	nrfjprog -f nrf52 --program settings.hex --sectorerase
+@@ -601,6 +596,9 @@ mergeflash:
+ 	nrfjprog -f nrf52 --program remote_fw.hex --sectorerase
+ 	nrfjprog -f nrf52 --reset
+ 
++dfu:
++	nrfutil pkg generate --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 3 --hw-version 0x20023 --sd-req 0xA5 --key-file private-key.pem dfu-app.zip
++
+ erase:
+ 	nrfjprog -f nrf52 --eraseall
+ 
+-- 
+2.17.1.windows.2
+
+
+From 2717889a47add94c88bd911e12b29adc5739ef1b Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 23 Jul 2018 09:54:17 +0200
+Subject: [PATCH 12/20] Enabled mouse scroll gesture and improved mouse
+ filetring
+
+---
+ Source/Drivers/drv_touchpad_mtch6102.c | 48 +++++++++++++-------------
+ 1 file changed, 24 insertions(+), 24 deletions(-)
+
+diff --git a/Source/Drivers/drv_touchpad_mtch6102.c b/Source/Drivers/drv_touchpad_mtch6102.c
+index a7d7af1..ad86330 100644
+--- a/Source/Drivers/drv_touchpad_mtch6102.c
++++ b/Source/Drivers/drv_touchpad_mtch6102.c
+@@ -226,33 +226,33 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
+             //True Down
+             NRF_LOG_INFO("***IGOR* Gesture Left swipe");
+         }
+-        else if (m_buffer[4] == 0x41 && touch_readings <= 6) {
++        else if (m_buffer[4] == 0x41 && touch_readings <= 7) {
+             //True Right
+             NRF_LOG_INFO("***IGOR* Gesture Down swipe tr=%u", touch_readings);
+-//            int8_t diff = (10 - touch_readings);
+-//            if (diff > 0)
+-//                p_data->scroll = diff;
+-//
+-//            p_data->x = 0;
+-//            p_data->y = 0;
+-//            prev_touch_x = INT16_MAX;
+-//            prev_touch_y = INT16_MAX;
++            int8_t diff = (10 - touch_readings);
++            if (diff > 0)
++                p_data->scroll = diff;
++
++            p_data->x = 0;
++            p_data->y = 0;
++            prev_touch_x = INT16_MAX;
++            prev_touch_y = INT16_MAX;
+         }
+         else if (m_buffer[4] == 0x51) {
+             //True Up
+             NRF_LOG_INFO("***IGOR* Gesture Right swipe");
+         }
+-        else if (m_buffer[4] == 0x61 && touch_readings <=6) {
++        else if (m_buffer[4] == 0x61 && touch_readings <=7) {
+             //True Left
+             NRF_LOG_INFO("***IGOR* Gesture Up swipe tr=%u", touch_readings);
+-//            int8_t diff = (10 - touch_readings) * 2;
+-//            if (diff > 0)
+-//                p_data->scroll = -diff;
+-//
+-//            p_data->x = 0;
+-//            p_data->y = 0;
+-//            prev_touch_x = INT16_MAX;
+-//            prev_touch_y = INT16_MAX;
++            int8_t diff = (10 - touch_readings);
++            if (diff > 0)
++                p_data->scroll = -diff;
++
++            p_data->x = 0;
++            p_data->y = 0;
++            prev_touch_x = INT16_MAX;
++            prev_touch_y = INT16_MAX;
+         }
+         else {
+ //            if (m_buffer[4] & 0x02) {
+@@ -269,9 +269,9 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
+ 
+         touch_readings++;
+ 
+-        if (touch_readings > 3) {
++        if (touch_readings > 4) {
+             p_data->y = (x - prev_touch_x) / 5;
+-            p_data->x = (prev_touch_y - y) / 4;
++            p_data->x = (prev_touch_y - y) / 3;
+         }
+         else {
+             p_data->y = 0;
+@@ -300,9 +300,9 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
+ 
+         //NRF_LOG_INFO("*IGOR* Touch x=%04x, y=%04x, b0=%02x", x, y, m_buffer[0]);
+     } else {
+-        if (p_data->x > 10) {
++        if (p_data->x > 5) {
+             p_data->x = p_data->x / 2;
+-        } else if (p_data->x < -10) {
++        } else if (p_data->x < -5) {
+             p_data->x = p_data->x / 2;
+         } else {
+             p_data->x = 0;
+@@ -310,9 +310,9 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
+             prev_touch_x = INT16_MAX;
+         }
+ 
+-        if (p_data->y > 10) {
++        if (p_data->y > 5) {
+             p_data->y = p_data->y / 2;
+-        } else if (p_data->y < -10) {
++        } else if (p_data->y < -5) {
+             p_data->y = p_data->y / 2;
+         } else {
+             p_data->y = 0;
+-- 
+2.17.1.windows.2
+
+
+From 47c3f5a8401e23dc61cc86c9d79150df87062c0b Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 23 Jul 2018 15:00:09 +0200
+Subject: [PATCH 13/20] Makfile updates
+
+---
+ Projects/Firmware_nRF52832/armgcc/Makefile | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/Projects/Firmware_nRF52832/armgcc/Makefile b/Projects/Firmware_nRF52832/armgcc/Makefile
+index d7a3c42..eccad48 100644
+--- a/Projects/Firmware_nRF52832/armgcc/Makefile
++++ b/Projects/Firmware_nRF52832/armgcc/Makefile
+@@ -581,11 +581,14 @@ $(foreach target, $(TARGETS), $(call define_target, $(target)))
+ 
+ # Flash the program
+ flash:
+-	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 3 --bootloader-version 2 --bl-settings-version 1 settings.hex
++	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 0 --bootloader-version 0 --bl-settings-version 1 settings.hex
+ 	nrfjprog -f nrf52 --program settings.hex --sectorerase
+ 	nrfjprog -f nrf52 --program $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --sectorerase
+ 	nrfjprog -f nrf52 --reset
+ 
++bootsettings:
++	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 0 --bootloader-version 0 --bl-settings-version 1 settings.hex
++
+ merge:
+ 	mergehex -m $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex settings.hex ../../Bootloader_nRF52832/armgcc/_build/PCA20023-SR3_nRF52832_Product_Example_Bootloader.hex -o remote_fw1.hex
+ 	mergehex -m remote_fw1.hex ../../../../../../../SoftDevices/nRF52832/s132_nrf52_5.1.0_softdevice.hex -o remote_fw.hex
+@@ -597,7 +600,7 @@ mergeflash:
+ 	nrfjprog -f nrf52 --reset
+ 
+ dfu:
+-	nrfutil pkg generate --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 3 --hw-version 0x20023 --sd-req 0xA5 --key-file private-key.pem dfu-app.zip
++	nrfutil pkg generate --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 0 --hw-version 0x20023 --sd-req 0xA5 --key-file private-key.pem dfu-app.zip
+ 
+ erase:
+ 	nrfjprog -f nrf52 --eraseall
+-- 
+2.17.1.windows.2
+
+
+From e8d9a6c732ee4f8385b8d7067379e266a16f52f9 Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Mon, 23 Jul 2018 15:01:37 +0200
+Subject: [PATCH 14/20] Updated the private&public keys
+
+---
+ Projects/Firmware_nRF52832/armgcc/private-key.pem |  5 +++++
+ Source/Configuration/bootloader_key.c             | 13 ++++++++++++-
+ 2 files changed, 17 insertions(+), 1 deletion(-)
+ create mode 100644 Projects/Firmware_nRF52832/armgcc/private-key.pem
+
+diff --git a/Projects/Firmware_nRF52832/armgcc/private-key.pem b/Projects/Firmware_nRF52832/armgcc/private-key.pem
+new file mode 100644
+index 0000000..94f1554
+--- /dev/null
++++ b/Projects/Firmware_nRF52832/armgcc/private-key.pem
+@@ -0,0 +1,5 @@
++-----BEGIN EC PRIVATE KEY-----
++MHcCAQEEIBRGKuQkkvVdDz7/6lBCsYUCivmXiLQ6RZGSxOGMTgXCoAoGCCqGSM49
++AwEHoUQDQgAEy7VYer0V6u0Av8r4j5KMgH8fjATN4AFbT94wdy77IrYsverC5Erx
++/bBKPQNd7BwMGyzwtMtCr8v11UVoelOksA==
++-----END EC PRIVATE KEY-----
+diff --git a/Source/Configuration/bootloader_key.c b/Source/Configuration/bootloader_key.c
+index 3ed528b..baee97e 100644
+--- a/Source/Configuration/bootloader_key.c
++++ b/Source/Configuration/bootloader_key.c
+@@ -3,10 +3,21 @@
+ #include "stdint.h"
+ #include "compiler_abstraction.h"
+ 
++#if 1
++// My generated key
++/** @brief Public key used to verify DFU images */
++__ALIGN(4) const uint8_t pk[64] =
++{
++    0xb6, 0x22, 0xfb, 0x2e, 0x77, 0x30, 0xde, 0x4f, 0x5b, 0x01, 0xe0, 0xcd, 0x04, 0x8c, 0x1f, 0x7f, 0x80, 0x8c, 0x92, 0x8f, 0xf8, 0xca, 0xbf, 0x00, 0xed, 0xea, 0x15, 0xbd, 0x7a, 0x58, 0xb5, 0xcb,
++    0xb0, 0xa4, 0x53, 0x7a, 0x68, 0x45, 0xd5, 0xf5, 0xcb, 0xaf, 0x42, 0xcb, 0xb4, 0xf0, 0x2c, 0x1b, 0x0c, 0x1c, 0xec, 0x5d, 0x03, 0x3d, 0x4a, 0xb0, 0xfd, 0xf1, 0x4a, 0xe4, 0xc2, 0xea, 0xbd, 0x2c
++};
++
++#else
++// Nordic default key
+ /** @brief Public key used to verify DFU images */
+ __ALIGN(4) const uint8_t pk[64] =
+ {
+     0x78, 0x2e, 0x46, 0x89, 0x0f, 0x46, 0x90, 0x38, 0x73, 0xb5, 0x9b, 0xe3, 0x94, 0xb3, 0xc6, 0x8b, 0xec, 0xb8, 0x69, 0x2e, 0x09, 0x64, 0x00, 0x2c, 0x3c, 0x57, 0xab, 0x40, 0x65, 0xcd, 0x15, 0x25, 
+     0x5b, 0x1f, 0xf1, 0x0f, 0xb3, 0x91, 0x51, 0x6f, 0x73, 0x20, 0x5f, 0x31, 0x38, 0x14, 0x23, 0x91, 0x0e, 0x6d, 0x81, 0x1c, 0xee, 0x51, 0xd4, 0x8c, 0x2f, 0x09, 0x70, 0x7b, 0x00, 0xef, 0x7a, 0xde
+ };
+-
++#endif
+-- 
+2.17.1.windows.2
+
+
+From fd560b71ae695d3604272c60bec6a280a072050f Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Tue, 24 Jul 2018 14:40:44 +0200
+Subject: [PATCH 15/20] Turning on LED in bootloader
+
+---
+ Source/Bootloader/sr3_bootloader.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/Source/Bootloader/sr3_bootloader.c b/Source/Bootloader/sr3_bootloader.c
+index d0fee88..d057edb 100644
+--- a/Source/Bootloader/sr3_bootloader.c
++++ b/Source/Bootloader/sr3_bootloader.c
+@@ -48,6 +48,7 @@
+ #include "nrf_log_backend_rtt.h"
+ #include "nrf_log_ctrl.h"
+ #include "nrf_wdt.h"
++#include "nrf_gpio.h"
+ 
+ #include "app_timer.h"
+ #include "drv_board.h"
+@@ -59,7 +60,6 @@
+ #include "nrf_log.h"
+ NRF_LOG_MODULE_REGISTER();
+ 
+-
+ /**@brief The interval at which inactivity timer is being triggered.
+  * @note Must be often enough to make sure watchdog is feed properly timely.
+  */
+@@ -160,6 +160,10 @@ int main(void)
+     // Feed watchdog to assure we won't reset just after reboot.
+     sr3_bootloader_watchdog_feed();
+ 
++    // Turn on LED
++    nrf_gpio_cfg_output(0x00000002);
++    nrf_gpio_pin_clear(0x00000002);
++
+ #if (NRF_LOG_ENABLED && NRF_LOG_BACKEND_RTT_ENABLED)
+     // Start logging if enabled.
+     sr3_bootloader_init_log();
+-- 
+2.17.1.windows.2
+
+
+From 7ccae117d4c2c804f256da2b70ff65c844615c4d Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Tue, 24 Jul 2018 14:44:13 +0200
+Subject: [PATCH 16/20] Configuration changes
+
+---
+ Source/Configuration/sr3_config_nrf52832_pca20023.h | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/Source/Configuration/sr3_config_nrf52832_pca20023.h b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+index 4f7a1d8..7ca7fe0 100644
+--- a/Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -762,7 +762,7 @@
+ // <o> Delete Bonds Key ID <0x00-0xFF>
+ // <i> Select the key that removes bonds if it is held during firmware boot.
+ /**@brief Keyboard: Delete Bonds Key ID <0x00-0xFF> */
+-#define CONFIG_KBD_DELETE_BONDS_KEY_ID 0x26
++#define CONFIG_KBD_DELETE_BONDS_KEY_ID 0x00 // Top key on NEWT DEV board
+ 
+ // <o> Android TV voice command Key ID <0x00-0xFF>
+ // <i> Select the key that triggers transmission of Android TV Voice command when ATVV Service is enabled in Bluetooth options.
+@@ -777,7 +777,7 @@
+ // <o> Google Chrome Voice Search Shortcut Key ID <0x00-0xFF>
+ // <i> Select the key that functions as the equivalent of the Google Chrome voice search shortcut (Ctrl+Shift+.).
+ /**@brief Keyboard: Google Chrome Voice Search Shortcut Key ID <0x00-0xFF> */
+-#define CONFIG_GOOGLE_VOICE_SHORTCUT_KEY_ID 0x23
++#define CONFIG_GOOGLE_VOICE_SHORTCUT_KEY_ID 0x23  //0xC0
+ 
+ 
+ // </e>
+@@ -1295,7 +1295,7 @@
+ // <o> Watchdog Time-out [s] <1-300>
+ // <i> Set the watchdog time-out.
+ /**@brief Watchdog Time-out [s] <1-300> */
+-#define CONFIG_WATCHDOG_TIMEOUT 3
++#define CONFIG_WATCHDOG_TIMEOUT 20
+ // </e>
+ 
+ // <h> Logging and CLI options
+@@ -1627,7 +1627,7 @@
+ // <o> First Connection Parameter Update Delay [ms] <10-30000>
+ // <i> Set the time between establishing the connection and the first Connection Parameter Update request.
+ /**@brief First Connection Parameter Update Delay [ms] <10-30000> */
+-#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 20
++#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 10
+ 
+ // <o> Next Connection Parameter Update Delay [s] <1-300>
+ // <i> Set the time between subsequent Connection Parameter Update requests.
+@@ -1707,7 +1707,7 @@
+ // <q> Allow Legacy Pairing
+ // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
+ /**@brief Allow Legacy Pairing */
+-#define CONFIG_SEC_LEGACY_PAIRING 0
++#define CONFIG_SEC_LEGACY_PAIRING 1
+ 
+ // <q> Allow LESC Pairing
+ // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
+-- 
+2.17.1.windows.2
+
+
+From dd8f5612c89297b58b12ceb0f19d9d72f65db85d Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Tue, 24 Jul 2018 14:45:25 +0200
+Subject: [PATCH 17/20] Enabled LED blinking
+
+---
+ Source/Configuration/sr3_config_nrf52832_pca20023.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Source/Configuration/sr3_config_nrf52832_pca20023.h b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+index 7ca7fe0..7bb253e 100644
+--- a/Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -818,7 +818,7 @@
+ // <e> Enable LED Support
+ // <i> Enable the LED signaling subsystem.
+ /**@brief Enable LED Support */
+-#define CONFIG_LED_ENABLED 0
++#define CONFIG_LED_ENABLED 1
+ 
+ // <o> LED Flip Interval [ms] <10-1000>
+ // <i> Time between each on/off switching of the LED.
+@@ -904,7 +904,7 @@
+ // <i> Specify how many times the LED will blink.
+ // <i> If set to 0, the LED will blink until cleared by another event.
+ /**@brief LED: Signal Connection Establishment - Number of LED Blinks <0-127> */
+-#define CONFIG_LED_CONNECTION_FLASHES 1
++#define CONFIG_LED_CONNECTION_FLASHES 2
+ 
+ // <o.0> Use LED 1
+ // <o.1> Use LED 2
+-- 
+2.17.1.windows.2
+
+
+From 1ee08b1b3d051b090b0dfc7704d0ceba840c86db Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Fri, 7 Sep 2018 10:51:55 +0200
+Subject: [PATCH 18/20] Better key_up handling for touch dpad. Added support
+ nor Newt UX HW
+
+---
+ Source/Configuration/sr3_config.c             | 19 ++++-
+ Source/Configuration/sr3_config_hid.h         | 17 ++++
+ .../sr3_config_nrf52832_pca20023.h            | 84 ++++++-------------
+ Source/Drivers/drv_gyro_icm20608.c            | 10 +++
+ Source/Drivers/drv_touchpad.h                 |  2 +
+ Source/Drivers/drv_touchpad_mtch6102.c        | 83 ++++++++++++++----
+ Source/Modules/m_touchpad.c                   | 13 ++-
+ 7 files changed, 150 insertions(+), 78 deletions(-)
+
+diff --git a/Source/Configuration/sr3_config.c b/Source/Configuration/sr3_config.c
+index 97a4094..a8c5b3a 100644
+--- a/Source/Configuration/sr3_config.c
++++ b/Source/Configuration/sr3_config.c
+@@ -56,6 +56,7 @@
+  */
+ const sr3_hid_keymap_t g_sr3_hid_keymap[] =
+ {
++#if NEWT_DEV_BOARD
+         { KEY_UP,           HID_USAGE(0x07, 0x52) },    /* Keyboard Up Arrow */
+         { KEY_DOWN,         HID_USAGE(0x07, 0x51) },    /* Keyboard Down Arrow */
+         { KEY_LEFT,         HID_USAGE(0x07, 0x50) },    /* Keyboard Left Arrow */
+@@ -68,6 +69,20 @@ const sr3_hid_keymap_t g_sr3_hid_keymap[] =
+         { KEY_BACK,         HID_USAGE(0x0C, 0x224) },    /* Keyboard Backspace */
+         { KEY_OK,           HID_USAGE(0x07, 0x28) },    /* Keyboard Enter */
+ //	    { KEY_MUTE,         HID_USAGE(0x07, 0x7F) },    /* Keyboard Mute */
++#else
++        { KEY_BACK,         HID_USAGE(0x0C, 0x224) },    /* Keyboard Backspace */
++        { KEY_HOME,         HID_USAGE(0x0C, 0x223) },    /* Keyboard Home key */
++        { KEY_UP,           HID_USAGE(0x07, 0x52) },    /* Keyboard Up Arrow */
++        { KEY_AC_SEARCH,    HID_USAGE(0x0C, 0x221) },   /* Consumer Control: AC Search */
++        { KEY_PLAY_PAUSE,   HID_USAGE(0x0C, 0xCD) },    /* Consumer Control: Play/Pause */
++        { KEY_DOWN,         HID_USAGE(0x07, 0x51) },    /* Keyboard Down Arrow */
++        { KEY_MUTE,         HID_USAGE(0x07, 0x7F) },    /* Keyboard Mute */
++        { KEY_VOL_UP,       HID_USAGE(0x0C, 0xE9) },    /* Consumer Control: Volume Increment */
++        { KEY_VOL_DOWN,     HID_USAGE(0x0C, 0xEA) },    /* Consumer Control: Volume Decrement */
++        { KEY_LEFT,         HID_USAGE(0x07, 0x50) },    /* Keyboard Left Arrow */
++        { KEY_RIGHT,        HID_USAGE(0x07, 0x4F) },    /* Keyboard Right Arrow */
++        { KEY_OK,           HID_USAGE(0x07, 0x28) },    /* Keyboard Enter */
++#endif
+ 
+ //    { KEY_MEDIA,        HID_USAGE(0x0C, 0x193) },   /* Consumer Control: AL A/V Capture/Playback */
+ //    { KEY_0,            HID_USAGE(0x07, 0x27) },    /* Keyboard '0' and ')' */
+@@ -119,9 +134,9 @@ const sr3_ir_keymap_t g_sr3_ir_keymap[] =
+ //    { KEY_2,            SR3_IR_SYMBOL( 1, 1) },    /* SIRC 2 */
+ //    { KEY_3,            SR3_IR_SYMBOL( 2, 1) },    /* SIRC 3 */
+ //	    { KEY_OK,           SR3_IR_SYMBOL(11, 1) },    /* SIRC Enter */
+-    { KEY_VOL_DOWN,     SR3_IR_SYMBOL(19, 1) },    /* SIRC Volume Down */
++//    { KEY_VOL_DOWN,     SR3_IR_SYMBOL(19, 1) },    /* SIRC Volume Down */
+ //    { KEY_CH_DOWN,      SR3_IR_SYMBOL(17, 1) },    /* SIRC Channel Down */
+-    { KEY_VOL_UP,       SR3_IR_SYMBOL(18, 1) },    /* SIRC Volume Up */
++//    { KEY_VOL_UP,       SR3_IR_SYMBOL(18, 1) },    /* SIRC Volume Up */
+ //    { KEY_CH_UP,        SR3_IR_SYMBOL(16, 1) },    /* SIRC Channel Up */
+ //    { KEY_MUTE,         SR3_IR_SYMBOL(20, 1) },    /* SIRC Mute */
+ //    { KEY_POWER,        SR3_IR_SYMBOL(21, 1) },    /* SIRC Power */
+diff --git a/Source/Configuration/sr3_config_hid.h b/Source/Configuration/sr3_config_hid.h
+index b780c27..bdb2e8d 100644
+--- a/Source/Configuration/sr3_config_hid.h
++++ b/Source/Configuration/sr3_config_hid.h
+@@ -63,6 +63,7 @@
+  * Keep names ordered by the Key ID. The keymap tables must have the same order.
+  */
+ 
++#if NEWT_DEV_BOARD
+ #define KEY_OK_NO_SEND  KEYBOARD_KEY_ID(0, 0)
+ #define KEY_UP          KEYBOARD_KEY_ID(1, 0)
+ #define KEY_DOWN        KEYBOARD_KEY_ID(2, 0)
+@@ -75,6 +76,22 @@
+ #define KEY_HOME        KEYBOARD_KEY_ID(9, 0)
+ #define KEY_BACK        KEYBOARD_KEY_ID(10, 0)
+ #define KEY_OK          KEYBOARD_KEY_ID(15, 0)
++#else
++#define KEY_BACK        KEYBOARD_KEY_ID(0, 0)
++#define KEY_HOME        KEYBOARD_KEY_ID(1, 0)
++#define KEY_UP          KEYBOARD_KEY_ID(2, 0)
++#define KEY_AC_SEARCH   KEYBOARD_KEY_ID(3, 0)
++#define KEY_PLAY_PAUSE  KEYBOARD_KEY_ID(4, 0)
++#define KEY_DOWN        KEYBOARD_KEY_ID(5, 0)
++#define KEY_MUTE        KEYBOARD_KEY_ID(6, 0)
++#define KEY_VOL_UP      KEYBOARD_KEY_ID(7, 0)
++#define KEY_VOL_DOWN    KEYBOARD_KEY_ID(8, 0)
++#define KEY_OK_NO_SEND  KEYBOARD_KEY_ID(9, 0)
++#define KEY_LEFT        KEYBOARD_KEY_ID(10, 0)
++#define KEY_RIGHT       KEYBOARD_KEY_ID(11, 0)
++#define KEY_OK          KEYBOARD_KEY_ID(15, 0)
++#endif
++
+ //#define KEY_4           KEYBOARD_KEY_ID(11, 0) // Airmouse
+ 
+ //#define KEY_PLAY_PAUSE  KEYBOARD_KEY_ID(8, 0)
+diff --git a/Source/Configuration/sr3_config_nrf52832_pca20023.h b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+index 7bb253e..5763876 100644
+--- a/Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -50,6 +50,8 @@
+ #ifndef _SR3_CONFIG_BOARD_H
+ #define _SR3_CONFIG_BOARD_H
+ 
++#define NEWT_DEV_BOARD 1
++
+ // <<< Use Configuration Wizard in Context Menu >>>
+ 
+ // <h> Smart Remote 3 nRF52 Features
+@@ -641,7 +643,11 @@
+ // <o> Gyroscope Mode Toggle Key ID <0x00-0xFF>
+ // <i> Select the key that toggles the gyroscope mode.
+ /**@brief Gyroscope Mode Toggle Key ID <0x00-0xFF> */
++#if NEWT_DEV_BOARD
+ #define CONFIG_GYRO_MODE_KEY_ID 0xB0
++#else
++#define CONFIG_GYRO_MODE_KEY_ID 0x20
++#endif
+ 
+ // <o> Left Click Key ID <0x00-0xFF>
+ // <i> Select the key that acts as the left mouse button in the gyroscope mode.
+@@ -1271,7 +1277,7 @@
+ // <o> Standby Time-out [s] <1-3600>
+ // <i> Set the time after which the remote is automatically put into deep sleep mode if no user interaction is detected.
+ /**@brief Standby Time-out [s] <1-3600> */
+-#define CONFIG_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_S 60
++#define CONFIG_PWR_MGMT_CONFIG_STANDBY_TIMEOUT_S 180
+ 
+ // <h> Logging Options
+ // <i> This section configures module-specific logging options.
+@@ -1707,7 +1713,7 @@
+ // <q> Allow Legacy Pairing
+ // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
+ /**@brief Allow Legacy Pairing */
+-#define CONFIG_SEC_LEGACY_PAIRING 1
++#define CONFIG_SEC_LEGACY_PAIRING 0
+ 
+ // <q> Allow LESC Pairing
+ // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
+@@ -2008,76 +2014,36 @@
+ //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+ //  <0xFFFFFFFF=>Disable
+ /**@brief Matrix Keyboard: Row 0 Pin */
+-#define CONFIG_IO_KEY_ROW_0 3
+ 
+-// <o> Row 1 Pin
+-//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+-//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+-//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+-//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+-//  <0xFFFFFFFF=>Disable
+-/**@brief Matrix Keyboard: Row 1 Pin */
++#if NEWT_DEV_BOARD
++#define CONFIG_IO_KEY_ROW_0 3
+ #define CONFIG_IO_KEY_ROW_1 8
+-
+-// <o> Row 2 Pin
+-//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+-//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+-//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+-//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+-//  <0xFFFFFFFF=>Disable
+-/**@brief Matrix Keyboard: Row 2 Pin */
+ #define CONFIG_IO_KEY_ROW_2 11
+-
+-// <o> Row 3 Pin
+-//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+-//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+-//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+-//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+-//  <0xFFFFFFFF=>Disable
+-/**@brief Matrix Keyboard: Row 3 Pin */
+ #define CONFIG_IO_KEY_ROW_3 12
+-
+-// <o> Row 4 Pin
+-//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+-//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+-//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+-//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+-//  <0xFFFFFFFF=>Disable
+-/**@brief Matrix Keyboard: Row 4 Pin */
+ #define CONFIG_IO_KEY_ROW_4 16
+-
+-// <o> Row 5 Pin
+-//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+-//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+-//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+-//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+-//  <0xFFFFFFFF=>Disable
+-/**@brief Matrix Keyboard: Row 5 Pin */
+ #define CONFIG_IO_KEY_ROW_5 17
+-
+-// <o> Row 6 Pin
+-//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+-//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+-//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+-//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+-//  <0xFFFFFFFF=>Disable
+-/**@brief Matrix Keyboard: Row 6 Pin */
+ #define CONFIG_IO_KEY_ROW_6 18
+-
+-// <o> Row 7 Pin
+-//  <0=>P0.0   <1=>P0.1   <2=>P0.2   <3=>P0.3   <4=>P0.4   <5=>P0.5   <6=>P0.6   <7=>P0.7
+-//  <8=>P0.8   <9=>P0.9   <10=>P0.10 <11=>P0.11 <12=>P0.12 <13=>P0.13 <14=>P0.14 <15=>P0.15
+-//  <16=>P0.16 <17=>P0.17 <18=>P0.18 <19=>P0.19 <20=>P0.20 <21=>P0.21 <22=>P0.22 <23=>P0.23
+-//  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
+-//  <0xFFFFFFFF=>Disable
+-/**@brief Matrix Keyboard: Row Pin */
+ #define CONFIG_IO_KEY_ROW_7 19
+-
+ #define CONFIG_IO_KEY_ROW_8 20
+ #define CONFIG_IO_KEY_ROW_9 25
+ #define CONFIG_IO_KEY_ROW_10 27
+ #define CONFIG_IO_KEY_ROW_11 28
+ #define CONFIG_IO_KEY_ROW_12 4
++#else
++#define CONFIG_IO_KEY_ROW_0 3
++#define CONFIG_IO_KEY_ROW_1 8
++#define CONFIG_IO_KEY_ROW_2 11
++#define CONFIG_IO_KEY_ROW_3 12
++#define CONFIG_IO_KEY_ROW_4 16
++#define CONFIG_IO_KEY_ROW_5 17
++#define CONFIG_IO_KEY_ROW_6 18
++#define CONFIG_IO_KEY_ROW_7 19
++#define CONFIG_IO_KEY_ROW_8 20
++#define CONFIG_IO_KEY_ROW_9 25
++#define CONFIG_IO_KEY_ROW_10 0xFFFFFFFF
++#define CONFIG_IO_KEY_ROW_11 0xFFFFFFFF
++#define CONFIG_IO_KEY_ROW_12 0xFFFFFFFF
++#endif
+ // </h>
+ 
+ // <h> LEDs
+diff --git a/Source/Drivers/drv_gyro_icm20608.c b/Source/Drivers/drv_gyro_icm20608.c
+index d8754d7..576533b 100644
+--- a/Source/Drivers/drv_gyro_icm20608.c
++++ b/Source/Drivers/drv_gyro_icm20608.c
+@@ -332,6 +332,7 @@ static void drv_gyro_read_callback(ret_code_t status, void *p_user_data)
+ 
+     if (status == NRF_SUCCESS)
+     {
++#if NEWT_DEV_BOARD
+         p_samples->AccSamples.X  =  ((int16_t)((s_read_buffer[0+0] << 8) | s_read_buffer[0+1]));
+         p_samples->AccSamples.Y  = -((int16_t)((s_read_buffer[0+2] << 8) | s_read_buffer[0+3]));
+         p_samples->AccSamples.Z  = -((int16_t)((s_read_buffer[0+4] << 8) | s_read_buffer[0+5]));
+@@ -339,6 +340,15 @@ static void drv_gyro_read_callback(ret_code_t status, void *p_user_data)
+         p_samples->GyroSamples.X =  ((int16_t)((s_read_buffer[8+0] << 8) | s_read_buffer[8+1]));
+         p_samples->GyroSamples.Y =  ((int16_t)((s_read_buffer[8+2] << 8) | s_read_buffer[8+3]));
+         p_samples->GyroSamples.Z =  ((int16_t)((s_read_buffer[8+4] << 8) | s_read_buffer[8+5]));
++#else
++        p_samples->AccSamples.Y  = ((int16_t)((s_read_buffer[0+0] << 8) | s_read_buffer[0+1]));
++        p_samples->AccSamples.X  = ((int16_t)((s_read_buffer[0+2] << 8) | s_read_buffer[0+3]));
++        p_samples->AccSamples.Z  = ((int16_t)((s_read_buffer[0+4] << 8) | s_read_buffer[0+5]));
++
++        p_samples->GyroSamples.Y =  ((int16_t)((s_read_buffer[8+0] << 8) | s_read_buffer[8+1]));
++        p_samples->GyroSamples.X =  -((int16_t)((s_read_buffer[8+2] << 8) | s_read_buffer[8+3]));
++        p_samples->GyroSamples.Z =  -((int16_t)((s_read_buffer[8+4] << 8) | s_read_buffer[8+5]));
++#endif
+ 
+         NRF_LOG_DEBUG("%s(): Acc X = %d", (uint32_t)__func__, p_samples->AccSamples.X);
+         NRF_LOG_DEBUG("%s(): Acc Y = %d", (uint32_t)__func__, p_samples->AccSamples.Y);
+diff --git a/Source/Drivers/drv_touchpad.h b/Source/Drivers/drv_touchpad.h
+index 84b1259..1b1fac7 100644
+--- a/Source/Drivers/drv_touchpad.h
++++ b/Source/Drivers/drv_touchpad.h
+@@ -96,6 +96,8 @@ ret_code_t drv_touchpad_schedule_read(drv_touchpad_data_t *p_data);
+ 
+ uint16_t drv_touchpad_dpad_ok_clicked(void) ;
+ 
++uint16_t drv_touchpad_dpad_ok_released(void) ;
++
+ #endif /* __DRV_TOUCHPAD_H__ */
+ 
+ /** @} */
+diff --git a/Source/Drivers/drv_touchpad_mtch6102.c b/Source/Drivers/drv_touchpad_mtch6102.c
+index ad86330..1df34aa 100644
+--- a/Source/Drivers/drv_touchpad_mtch6102.c
++++ b/Source/Drivers/drv_touchpad_mtch6102.c
+@@ -7,6 +7,7 @@
+ #include "nrf_atomic.h"
+ #include "nrf_assert.h"
+ #include "nrf_gpio.h"
++#include "nrf_delay.h"
+ #include "app_debug.h"
+ #include "app_error.h"
+ #include "app_gpiote.h"
+@@ -41,13 +42,23 @@ NRF_LOG_MODULE_REGISTER();
+ #define TOUCHPAD_MODE_REG        0x05 //!< Device mode register.
+ #define TOUCHPAD_TOUCH_DATA_BASE 0x10 //!< Touch RAM memory map base adr
+ 
++#if NEWT_DEV_BOARD
+ #define TOUCHPAD_MAX_X           576
+-#define TOUCHPAD_MAX_Y           384
+-
+ #define TOUCHPAD_LOW_TH_X        ( TOUCHPAD_MAX_X / 4)
+ #define TOUCHPAD_HIGH_TH_X       ( (3*TOUCHPAD_MAX_X) / 4)
++
++#define TOUCHPAD_MAX_Y           384
+ #define TOUCHPAD_LOW_TH_Y        ( TOUCHPAD_MAX_Y / 6)
+ #define TOUCHPAD_HIGH_TH_Y       ( (4*TOUCHPAD_MAX_Y) / 6)
++#else
++#define TOUCHPAD_MAX_X           384
++#define TOUCHPAD_LOW_TH_X        ( (2*TOUCHPAD_MAX_X) / 6)
++#define TOUCHPAD_HIGH_TH_X       ( (4*TOUCHPAD_MAX_X) / 6)
++
++#define TOUCHPAD_MAX_Y           384
++#define TOUCHPAD_LOW_TH_Y        ( (2*TOUCHPAD_MAX_Y) / 6)
++#define TOUCHPAD_HIGH_TH_Y       ( (4*TOUCHPAD_MAX_Y) / 6)
++#endif
+ 
+ //#define TOUCHPAD_PRODUCT_ID    0xA2 //!< Address of the product ID string.
+ 
+@@ -73,6 +84,7 @@ static uint8_t m_buffer[6];
+ static int16_t prev_touch_x;
+ static int16_t prev_touch_y;
+ static uint8_t touch_readings;
++static uint16_t prev_key_clicked;
+ 
+ static drv_touchpad_data_t *p_user_data;
+ 
+@@ -88,8 +100,13 @@ static const nrf_twi_mngr_transfer_t m_touchpad_read_transfers[] = {
+ NRF_TWI_MNGR_WRITE (DEVICE_ADDRESS, &m_touch_data_base_reg, 1, NRF_TWI_MNGR_NO_STOP),
+ NRF_TWI_MNGR_READ (DEVICE_ADDRESS, &m_buffer[0], 6, 0), };
+ 
++#if NEWT_DEV_BOARD
+ static uint8_t m_touch_layout_conf[] = { 0x20, // Reg 0x20
+         0x9, 0x6, 0x6, 0x4F, 0x3F }; //
++#else
++static uint8_t m_touch_layout_conf[] = { 0x20, // Reg 0x20
++        0x6, 0x6, 0x6, 0x43, 0x43 }; //
++#endif
+ 
+ static uint8_t m_touch_gesture_conf[] = { 0x37, //Reg 0x37
+         0x40, 0x40, 0x19, 0x19, 0x40, 0x32, 0x00, 0x0C, 0x20, 0x04, 0x2D, 0x2D };
+@@ -187,7 +204,7 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
+ 
+         if (m_buffer[4] == 0x10) {
+             NRF_LOG_INFO("***IGOR* Gesture Single click");
+-            p_data->tap = true;
++            //p_data->tap = true;
+         } else if (m_buffer[4] == 0x31) { //True Down
+             NRF_LOG_INFO("***IGOR* Gesture Left s=%u", swipe_speed);
+             p_data->x = -swipe_speed;
+@@ -264,14 +281,19 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
+     }
+ 
+     if (m_buffer[0] & 0x01) { // Touch
+-        int16_t x = (m_buffer[1] << 4) | (m_buffer[3] >> 4);
+-        int16_t y = (m_buffer[2] << 4) | ((m_buffer[3] & 0xF0) >> 4);
++        int16_t x = (m_buffer[1] << 4) | ((m_buffer[3] & 0xF0) >> 4);
++        int16_t y = (m_buffer[2] << 4) |  (m_buffer[3] & 0x0F);
+ 
+         touch_readings++;
+ 
+         if (touch_readings > 4) {
++#if NEWT_DEV_BOARD
+             p_data->y = (x - prev_touch_x) / 5;
+             p_data->x = (prev_touch_y - y) / 3;
++#else
++            p_data->y = (prev_touch_x - x) / 3;
++            p_data->x = (y - prev_touch_y) / 3;
++#endif
+         }
+         else {
+             p_data->y = 0;
+@@ -329,6 +351,8 @@ static void touchpad_read_callback(ret_code_t status, void *p_user_data) {
+         NRF_LOG_INFO("****IGOR* Large activation");
+     }
+ 
++    NRF_GPIO->OUTSET = (1ul << 2);
++
+     nrf_atomic_flag_clear(&m_read_operation_active);
+     m_read_handler(status, p_data);
+ }
+@@ -347,39 +371,66 @@ static void touchpad_init_callback(ret_code_t status, void *p_user_data) {
+ static void drv_touchpad_interrupt_handler(uint32_t const *p_event_pins_low_to_high,
+         uint32_t const *p_event_pins_high_to_low)
+ {
++    //NRF_GPIO->OUTCLR = (1ul << 2);
+     //NRF_LOG_INFO("*IGOR********* Interrupt");
+     drv_touchpad_schedule_read(p_user_data);
+ }
+ 
+ uint16_t drv_touchpad_dpad_ok_clicked(void) {
++    uint16_t key_clicked = KEY_OK;
+     NRF_LOG_INFO("*IGOR* x=%d, y=%d", prev_touch_x, prev_touch_y);
+     if (prev_touch_x == INT16_MAX && prev_touch_y == INT16_MAX) {
+         NRF_LOG_INFO("*IGOR* DPAD OK");
+-        return KEY_OK;
++        key_clicked = KEY_OK;
+     }
+ 
+     if ((prev_touch_x <= TOUCHPAD_LOW_TH_X) &&
+             (prev_touch_y >= TOUCHPAD_LOW_TH_Y) && (prev_touch_y <= TOUCHPAD_HIGH_TH_Y)) {
+-        NRF_LOG_INFO("*IGOR* DPAD UP");
+-        return KEY_UP;
++#if NEWT_DEV_BOARD
++        NRF_LOG_INFO("*IGOR* KEY_UP");
++        key_clicked = KEY_UP;
++#else
++        NRF_LOG_INFO("*IGOR* KEY_DOWN");
++        key_clicked = KEY_DOWN;
++#endif
+     }
+     else if ((prev_touch_x >= TOUCHPAD_HIGH_TH_X) &&
+             (prev_touch_y >= TOUCHPAD_LOW_TH_Y) && (prev_touch_y <= TOUCHPAD_HIGH_TH_Y)) {
+-        NRF_LOG_INFO("*IGOR* DPAD DOWN");
+-        return KEY_DOWN;
++#if NEWT_DEV_BOARD
++        NRF_LOG_INFO("*IGOR* KEY_DOWN");
++        key_clicked = KEY_DOWN;
++#else
++        NRF_LOG_INFO("*IGOR* KEY_UP");
++        key_clicked = KEY_UP;
++#endif
+     }
+     else if ((prev_touch_y <= TOUCHPAD_LOW_TH_Y) &&
+             (prev_touch_x >= TOUCHPAD_LOW_TH_X) && (prev_touch_x <= TOUCHPAD_HIGH_TH_X)) {
+-        NRF_LOG_INFO("*IGOR* DPAD RIGHT");
+-        return KEY_RIGHT;
++#if NEWT_DEV_BOARD
++        NRF_LOG_INFO("*IGOR* KEY_RIGHT");
++        key_clicked = KEY_RIGHT;
++#else
++        NRF_LOG_INFO("*IGOR* KEY_LEFT");
++        key_clicked = KEY_LEFT;
++#endif
+     }
+     else if ((prev_touch_y >= TOUCHPAD_HIGH_TH_Y) &&
+             (prev_touch_x >= TOUCHPAD_LOW_TH_X) && (prev_touch_x <= TOUCHPAD_HIGH_TH_X)) {
+-        NRF_LOG_INFO("*IGOR* DPAD LEFT");
+-        return KEY_LEFT;
++#if NEWT_DEV_BOARD
++        NRF_LOG_INFO("*IGOR* KEY_LEFT");
++        key_clicked = KEY_LEFT;
++#else
++        NRF_LOG_INFO("*IGOR* KEY_RIGHT");
++        key_clicked = KEY_RIGHT;
++#endif
+     }
+ 
+-    return KEY_OK;
++    prev_key_clicked = key_clicked;
++    return key_clicked;
++}
++
++uint16_t drv_touchpad_dpad_ok_released(void) {
++    return prev_key_clicked;
+ }
+ 
+ ret_code_t drv_touchpad_init(drv_touchpad_read_handler_t read_handler, drv_touchpad_data_t *p_u_data) {
+@@ -429,6 +480,8 @@ ret_code_t drv_touchpad_init(drv_touchpad_read_handler_t read_handler, drv_touch
+         NRF_LOG_INFO("*IGOR* TP init err");
+     }
+ 
++    prev_key_clicked = KEY_OK;
++
+     return drv_touchpad_disable();
+ }
+ 
+diff --git a/Source/Modules/m_touchpad.c b/Source/Modules/m_touchpad.c
+index b2f944e..ed7ea0c 100644
+--- a/Source/Modules/m_touchpad.c
++++ b/Source/Modules/m_touchpad.c
+@@ -292,12 +292,21 @@ bool m_touchpad_event_handler(const event_t *p_event)
+                 uint32_t timestamp;
+                 uint16_t key_id_to_send;
+                 key_id_to_send = drv_touchpad_dpad_ok_clicked();
++                //NRF_LOG_INFO("*IGOR* DOWN key_id_to_send=%04x", key_id_to_send);
+ 
+                 timestamp = app_timer_cnt_get();
+                 event_send(EVT_KEY_DOWN, key_id_to_send, timestamp);
++            }
++            break;
++        case EVT_KEY_UP:
++            if (p_event->key.id == KEY_OK_NO_SEND) {
++                uint32_t timestamp;
++                uint16_t key_id_to_send;
++                key_id_to_send = drv_touchpad_dpad_ok_released();
++                //NRF_LOG_INFO("*IGOR* UP key_id_to_send=%04x", key_id_to_send);
+ 
+-                event_send(EVT_KEY_UP, key_id_to_send, timestamp + 10);
+-
++                timestamp = app_timer_cnt_get();
++                event_send(EVT_KEY_UP, key_id_to_send, timestamp);
+             }
+             break;
+ 
+-- 
+2.17.1.windows.2
+
+
+From 38106fd48c1c3b94ddf038b459d9797cdf3b8ec3 Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Fri, 7 Sep 2018 10:53:02 +0200
+Subject: [PATCH 19/20] Disable internal PUs for key GPIOs. Also Key_DRV is
+ always set to low.
+
+---
+ Source/Drivers/drv_keyboard_matrix.c | 14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/Source/Drivers/drv_keyboard_matrix.c b/Source/Drivers/drv_keyboard_matrix.c
+index 2131014..7820f04 100644
+--- a/Source/Drivers/drv_keyboard_matrix.c
++++ b/Source/Drivers/drv_keyboard_matrix.c
+@@ -195,7 +195,9 @@ static void drv_keyboard_gpio_cfg(uint32_t mask, uint32_t pin_cnf)
+ static void drv_keyboard_gpio_init(void)
+ {
+     // Make sure that columns will drive 0 when they will be configured as outputs.
+-    NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
++    //NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
++    // Drive PullUps High
++    NRF_GPIO->OUTSET = KEYBOARD_MASK_COL_ALL;
+     __DSB();
+ 
+     // Configure Columns.
+@@ -210,7 +212,7 @@ static void drv_keyboard_gpio_init(void)
+     drv_keyboard_gpio_cfg(KEYBOARD_MASK_ROW_ALL,
+             (GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos) |
+             (GPIO_PIN_CNF_DRIVE_S0S1       << GPIO_PIN_CNF_DRIVE_Pos) |
+-            (GPIO_PIN_CNF_PULL_Pullup    << GPIO_PIN_CNF_PULL_Pos)  |
++            (GPIO_PIN_CNF_PULL_Disabled    << GPIO_PIN_CNF_PULL_Pos)  |
+             (GPIO_PIN_CNF_DIR_Input        << GPIO_PIN_CNF_DIR_Pos)   |
+             (GPIO_PIN_CNF_INPUT_Connect    << GPIO_PIN_CNF_INPUT_Pos) );
+ 
+@@ -243,7 +245,7 @@ static ret_code_t drv_keyboard_sense_enable(void)
+ {
+     // Drive "1" on all columns.
+     //NRF_GPIO->OUTSET = KEYBOARD_MASK_COL_ALL;
+-    NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
++    //NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
+     __DSB();
+ 
+     // Enable GPIOTE sensing.
+@@ -263,7 +265,7 @@ static ret_code_t drv_keyboard_sense_disable(void)
+     }
+ 
+     // Drive "0" on all columns.
+-    NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
++    //NRF_GPIO->OUTCLR = KEYBOARD_MASK_COL_ALL;
+     __DSB();
+ 
+     return NRF_SUCCESS;
+@@ -364,6 +366,8 @@ static void drv_keyboard_scan(void* p_context)
+     m_key_vector_size   = 0;
+     m_keys_blocked      = false;
+ 
++    //NRF_LOG_INFO("*IGOR* gpios=%08x", (unsigned int) gpio_state);
++
+     for (column = 0; column < KEYBOARD_NUM_OF_COLUMNS; column++)
+     {
+         if (rows_state[column] == 0)
+@@ -378,7 +382,7 @@ static void drv_keyboard_scan(void* p_context)
+             if ((rows_state[column] & (1ul << row)) != 0)
+             {
+                 detected_keypresses_on_column += 1;
+-                //NRF_LOG_INFO("*IGOR* row nbr %u pressed", (unsigned int) row);
++                //NRF_LOG_INFO("*IGOR* Key nbr %u pressed", (unsigned int) row);
+ 
+                 if (m_key_vector_size < DRV_KEYBOARD_MAX_KEYS)
+                 {
+-- 
+2.17.1.windows.2
+
+
+From e718225de57e5a66e4be56763bf7622af07b7609 Mon Sep 17 00:00:00 2001
+From: Igor Gurovski <Igor.Gurovski@sigma.se>
+Date: Fri, 7 Sep 2018 17:25:22 +0200
+Subject: [PATCH 20/20] Enabled secure legacy pairing
+
+---
+ Source/Configuration/sr3_config_nrf52832_pca20023.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Source/Configuration/sr3_config_nrf52832_pca20023.h b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+index 5763876..96df739 100644
+--- a/Source/Configuration/sr3_config_nrf52832_pca20023.h
++++ b/Source/Configuration/sr3_config_nrf52832_pca20023.h
+@@ -50,7 +50,7 @@
+ #ifndef _SR3_CONFIG_BOARD_H
+ #define _SR3_CONFIG_BOARD_H
+ 
+-#define NEWT_DEV_BOARD 1
++#define NEWT_DEV_BOARD 0
+ 
+ // <<< Use Configuration Wizard in Context Menu >>>
+ 
+@@ -1713,7 +1713,7 @@
+ // <q> Allow Legacy Pairing
+ // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
+ /**@brief Allow Legacy Pairing */
+-#define CONFIG_SEC_LEGACY_PAIRING 0
++#define CONFIG_SEC_LEGACY_PAIRING 1
+ 
+ // <q> Allow LESC Pairing
+ // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
+-- 
+2.17.1.windows.2
+

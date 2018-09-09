@@ -164,10 +164,6 @@ int main(void)
     nrf_gpio_cfg_output(0x00000002);
     nrf_gpio_pin_clear(0x00000002);
 
-    // Turn on LED
-    nrf_gpio_cfg_output(0x00000002);
-    nrf_gpio_pin_clear(0x00000002);
-
 #if (NRF_LOG_ENABLED && NRF_LOG_BACKEND_RTT_ENABLED)
     // Start logging if enabled.
     sr3_bootloader_init_log();

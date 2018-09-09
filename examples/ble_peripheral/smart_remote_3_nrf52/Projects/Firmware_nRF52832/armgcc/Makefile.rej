@@ -1,0 +1,14 @@
+--- Projects/Firmware_nRF52832/armgcc/Makefile
++++ Projects/Firmware_nRF52832/armgcc/Makefile
+@@ -580,11 +580,6 @@ $(foreach target, $(TARGETS), $(call define_target, $(target)))
+ .PHONY: flash erase
+ 
+ # Flash the program
+-flash: $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex
+-	@echo Flashing: $<
+-	nrfjprog -f nrf52 --program $< --sectorerase
+-	nrfjprog -f nrf52 --reset
+-
+ flash:
+ 	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 3 --bootloader-version 2 --bl-settings-version 1 settings.hex
+ 	nrfjprog -f nrf52 --program settings.hex --sectorerase

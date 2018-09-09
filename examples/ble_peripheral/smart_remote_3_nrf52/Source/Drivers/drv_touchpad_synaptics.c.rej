@@ -1,0 +1,11 @@
+--- Source/Drivers/drv_touchpad_synaptics.c
++++ Source/Drivers/drv_touchpad_synaptics.c
+@@ -54,7 +54,7 @@
+ #include "twi_common.h"
+ #include "resources.h"
+ 
+-#if CONFIG_TOUCHPAD_ENABLED
++#if CONFIG_TOUCHPAD_ENABLED && (CONFIG_TOUCHPAD_DRV == 1)
+ 
+ #define NRF_LOG_MODULE_NAME drv_touchpad
+ #define NRF_LOG_LEVEL CONFIG_TOUCHPAD_DRV_LOG_LEVEL

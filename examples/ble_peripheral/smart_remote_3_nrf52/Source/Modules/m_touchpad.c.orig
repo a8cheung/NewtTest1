@@ -292,21 +292,12 @@ bool m_touchpad_event_handler(const event_t *p_event)
                 uint32_t timestamp;
                 uint16_t key_id_to_send;
                 key_id_to_send = drv_touchpad_dpad_ok_clicked();
-                //NRF_LOG_INFO("*IGOR* DOWN key_id_to_send=%04x", key_id_to_send);
 
                 timestamp = app_timer_cnt_get();
                 event_send(EVT_KEY_DOWN, key_id_to_send, timestamp);
-            }
-            break;
-        case EVT_KEY_UP:
-            if (p_event->key.id == KEY_OK_NO_SEND) {
-                uint32_t timestamp;
-                uint16_t key_id_to_send;
-                key_id_to_send = drv_touchpad_dpad_ok_released();
-                //NRF_LOG_INFO("*IGOR* UP key_id_to_send=%04x", key_id_to_send);
 
-                timestamp = app_timer_cnt_get();
-                event_send(EVT_KEY_UP, key_id_to_send, timestamp);
+                event_send(EVT_KEY_UP, key_id_to_send, timestamp + 10);
+
             }
             break;
 
