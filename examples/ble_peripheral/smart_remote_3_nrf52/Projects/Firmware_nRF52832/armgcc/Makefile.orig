@@ -1,5 +1,5 @@
 PROJECT_NAME     := Smart_Remote_3_nRF52_Firmware_nRF52832
-TARGETS          := PCA63519-SR3_nRF52832_Shield CUSTOM-SR3_nRF52832_Custom_Board PCA20023-SR3_nRF52832_Product_Example
+TARGETS          := PCA20023-SR3_nRF52832_Product_Example
 OUTPUT_DIRECTORY := _build
 
 SDK_ROOT := ../../../../../..
@@ -31,6 +31,7 @@ SRC_FILES += \
   $(PROJ_DIR)/Source/Drivers/drv_keyboard_sx1509.c \
   $(PROJ_DIR)/Source/Drivers/drv_leds_gpio.c \
   $(PROJ_DIR)/Source/Drivers/drv_touchpad_synaptics.c \
+  $(PROJ_DIR)/Source/Drivers/drv_touchpad_mtch6102.c \
   $(SDK_ROOT)/components/drivers_nrf/ble_flash/ble_flash.c \
   $(SDK_ROOT)/components/drivers_nrf/clock/nrf_drv_clock.c \
   $(SDK_ROOT)/components/drivers_nrf/common/nrf_drv_common.c \
@@ -460,6 +461,7 @@ OPT = -O2 -g3
 
 # C flags common to all targets
 CFLAGS += $(OPT)
+CFLAGS += -DCONFIG_NFCT_PINS_AS_GPIOS
 CFLAGS += -DAPP_SCHEDULER_ENABLED=1
 CFLAGS += -DARM_MATH_CM4
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
@@ -580,6 +582,28 @@ flash: $(OUTPUT_DIRECTORY)/PCA63519-SR3_nRF52832_Shield.hex
 	@echo Flashing: $<
 	nrfjprog -f nrf52 --program $< --sectorerase
 	nrfjprog -f nrf52 --reset
+
+flash:
+	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 0 --bootloader-version 0 --bl-settings-version 1 settings.hex
+	nrfjprog -f nrf52 --program settings.hex --sectorerase
+	nrfjprog -f nrf52 --program $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --sectorerase
+	nrfjprog -f nrf52 --reset
+
+bootsettings:
+	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 0 --bootloader-version 0 --bl-settings-version 1 settings.hex
+
+merge:
+	mergehex -m $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex settings.hex ../../Bootloader_nRF52832/armgcc/_build/PCA20023-SR3_nRF52832_Product_Example_Bootloader.hex -o remote_fw1.hex
+	mergehex -m remote_fw1.hex ../../../../../../../SoftDevices/nRF52832/s132_nrf52_5.1.0_softdevice.hex -o remote_fw.hex
+	rm remote_fw1.hex
+	@echo Merged all hex file to one file remote_fw.hex
+
+mergeflash:
+	nrfjprog -f nrf52 --program remote_fw.hex --sectorerase
+	nrfjprog -f nrf52 --reset
+
+dfu:
+	nrfutil pkg generate --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 0 --hw-version 0x20023 --sd-req 0xA5 --key-file private-key.pem dfu-app.zip
 
 erase:
 	nrfjprog -f nrf52 --eraseall

@@ -123,6 +123,8 @@ const size_t g_sr3_hid_keymap_size = sizeof(g_sr3_hid_keymap) / sizeof(g_sr3_hid
  */
 const sr3_ir_keymap_t g_sr3_ir_keymap[] =
 {
+	/* Albert fix */
+	{0, 0}
 //    { KEY_0,            SR3_IR_SYMBOL( 9, 1) },    /* SIRC 0 */
 //    { KEY_7,            SR3_IR_SYMBOL( 6, 1) },    /* SIRC 7 */
 //    { KEY_8,            SR3_IR_SYMBOL( 7, 1) },    /* SIRC 8 */

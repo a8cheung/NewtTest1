@@ -1,14 +1,27 @@
 --- Projects/Firmware_nRF52832/armgcc/Makefile
 +++ Projects/Firmware_nRF52832/armgcc/Makefile
-@@ -580,11 +580,6 @@ $(foreach target, $(TARGETS), $(call define_target, $(target)))
- .PHONY: flash erase
+@@ -1,5 +1,5 @@
+ PROJECT_NAME     := Smart_Remote_3_nRF52_Firmware_nRF52832
+-TARGETS          := PCA63519-SR3_nRF52832_Shield CUSTOM-SR3_nRF52832_Custom_Board PCA20023-SR3_nRF52832_Product_Example
++TARGETS          := PCA20023-SR3_nRF52832_Product_Example
+ OUTPUT_DIRECTORY := _build
  
- # Flash the program
--flash: $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex
--	@echo Flashing: $<
--	nrfjprog -f nrf52 --program $< --sectorerase
--	nrfjprog -f nrf52 --reset
--
- flash:
- 	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 3 --bootloader-version 2 --bl-settings-version 1 settings.hex
- 	nrfjprog -f nrf52 --program settings.hex --sectorerase
+ SHELL=cmd.exe
+@@ -462,6 +462,7 @@ OPT = -O2 -g3
+ 
+ # C flags common to all targets
+ CFLAGS += $(OPT)
++CFLAGS += -DCONFIG_NFCT_PINS_AS_GPIOS
+ CFLAGS += -DAPP_SCHEDULER_ENABLED=1
+ CFLAGS += -DARM_MATH_CM4
+ CFLAGS += -DBLE_STACK_SUPPORT_REQD
+--- Projects/Firmware_nRF52832/armgcc/Makefile
++++ Projects/Firmware_nRF52832/armgcc/Makefile
+@@ -32,6 +32,7 @@ SRC_FILES += \
+   $(PROJ_DIR)/Source/Drivers/drv_keyboard_sx1509.c \
+   $(PROJ_DIR)/Source/Drivers/drv_leds_gpio.c \
+   $(PROJ_DIR)/Source/Drivers/drv_touchpad_synaptics.c \
++  $(PROJ_DIR)/Source/Drivers/drv_touchpad_mtch6102.c \
+   $(SDK_ROOT)/components/drivers_nrf/ble_flash/ble_flash.c \
+   $(SDK_ROOT)/components/drivers_nrf/clock/nrf_drv_clock.c \
+   $(SDK_ROOT)/components/drivers_nrf/common/nrf_drv_common.c \

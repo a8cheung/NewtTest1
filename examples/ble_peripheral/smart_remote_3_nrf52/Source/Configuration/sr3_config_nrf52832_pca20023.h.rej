@@ -109,15 +109,33 @@
  
  // <o> Advertising Interval [ms] <20-10240>
  // <i> Configure the interval between advertising packets in the Advertising mode.
-@@ -1695,7 +1705,7 @@
- // <q> Allow Legacy Pairing
- // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
- /**@brief Allow Legacy Pairing */
--#define CONFIG_SEC_LEGACY_PAIRING 1
-+#define CONFIG_SEC_LEGACY_PAIRING 0
+@@ -1615,7 +1625,7 @@
+ // <o> First Connection Parameter Update Delay [ms] <10-30000>
+ // <i> Set the time between establishing the connection and the first Connection Parameter Update request.
+ /**@brief First Connection Parameter Update Delay [ms] <10-30000> */
+-#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 10
++#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 20
  
- // <q> Allow LESC Pairing
- // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
+ // <o> Next Connection Parameter Update Delay [s] <1-300>
+ // <i> Set the time between subsequent Connection Parameter Update requests.
+@@ -1741,7 +1751,7 @@
+ 
+ // <q> Signal support for 2 Mbit/s PHY
+ /**@brief Signal support for 2 Mbit/s PHY */
+-#define CONFIG_PHY_TX_2MBPS 1
++#define CONFIG_PHY_TX_2MBPS 0
+ // </h>
+ 
+ // <h> RX PHY Selection
+@@ -1751,7 +1761,7 @@
+ 
+ // <q> Signal support for 2 Mbit/s PHY
+ /**@brief Signal support for 2 Mbit/s PHY */
+-#define CONFIG_PHY_RX_2MBPS 1
++#define CONFIG_PHY_RX_2MBPS 0
+ // </h>
+ // </h>
+ 
 @@ -1924,7 +1934,7 @@
  //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
  //  <0xFFFFFFFF=>Disable
@@ -290,110 +308,3 @@
  #define CONFIG_TOUCHPAD_DRV 2
  #endif
  
---- Source/Configuration/sr3_config_nrf52832_pca20023.h
-+++ Source/Configuration/sr3_config_nrf52832_pca20023.h
-@@ -778,6 +778,8 @@
- // <i> Select the key that functions as the equivalent of the Google Chrome voice search shortcut (Ctrl+Shift+.).
- /**@brief Keyboard: Google Chrome Voice Search Shortcut Key ID <0x00-0xFF> */
- #define CONFIG_GOOGLE_VOICE_SHORTCUT_KEY_ID 0x23
-+
-+
- // </e>
- // </h>
- 
-@@ -2075,7 +2077,7 @@
- #define CONFIG_IO_KEY_ROW_9 25
- #define CONFIG_IO_KEY_ROW_10 27
- #define CONFIG_IO_KEY_ROW_11 28
--//#define CONFIG_IO_KEY_ROW_12 4
-+#define CONFIG_IO_KEY_ROW_12 4
- // </h>
- 
- // <h> LEDs
-@@ -2318,7 +2320,7 @@
- //  <24=>P0.24 <25=>P0.25 <26=>P0.26 <27=>P0.27 <28=>P0.28 <29=>P0.29 <30=>P0.30 <31=>P0.31
- //  <0xFFFFFFFF=>Disable
- /**@brief Buzzer Control Pin */
--#define CONFIG_IO_BUZZER 0x04
-+#define CONFIG_IO_BUZZER 0xFFFFFFFF
- // </h>
- 
- // <h> Advanced Options
---- Source/Configuration/sr3_config_nrf52832_pca20023.h
-+++ Source/Configuration/sr3_config_nrf52832_pca20023.h
-@@ -762,7 +762,7 @@
- // <o> Delete Bonds Key ID <0x00-0xFF>
- // <i> Select the key that removes bonds if it is held during firmware boot.
- /**@brief Keyboard: Delete Bonds Key ID <0x00-0xFF> */
--#define CONFIG_KBD_DELETE_BONDS_KEY_ID 0x26
-+#define CONFIG_KBD_DELETE_BONDS_KEY_ID 0x00 // Top key on NEWT DEV board
- 
- // <o> Android TV voice command Key ID <0x00-0xFF>
- // <i> Select the key that triggers transmission of Android TV Voice command when ATVV Service is enabled in Bluetooth options.
-@@ -777,7 +777,7 @@
- // <o> Google Chrome Voice Search Shortcut Key ID <0x00-0xFF>
- // <i> Select the key that functions as the equivalent of the Google Chrome voice search shortcut (Ctrl+Shift+.).
- /**@brief Keyboard: Google Chrome Voice Search Shortcut Key ID <0x00-0xFF> */
--#define CONFIG_GOOGLE_VOICE_SHORTCUT_KEY_ID 0x23
-+#define CONFIG_GOOGLE_VOICE_SHORTCUT_KEY_ID 0x23  //0xC0
- 
- 
- // </e>
-@@ -1295,7 +1295,7 @@
- // <o> Watchdog Time-out [s] <1-300>
- // <i> Set the watchdog time-out.
- /**@brief Watchdog Time-out [s] <1-300> */
--#define CONFIG_WATCHDOG_TIMEOUT 3
-+#define CONFIG_WATCHDOG_TIMEOUT 20
- // </e>
- 
- // <h> Logging and CLI options
-@@ -1627,7 +1627,7 @@
- // <o> First Connection Parameter Update Delay [ms] <10-30000>
- // <i> Set the time between establishing the connection and the first Connection Parameter Update request.
- /**@brief First Connection Parameter Update Delay [ms] <10-30000> */
--#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 20
-+#define CONFIG_FIRST_CONN_PARAMS_UPDATE_DELAY 10
- 
- // <o> Next Connection Parameter Update Delay [s] <1-300>
- // <i> Set the time between subsequent Connection Parameter Update requests.
-@@ -1707,7 +1707,7 @@
- // <q> Allow Legacy Pairing
- // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
- /**@brief Allow Legacy Pairing */
--#define CONFIG_SEC_LEGACY_PAIRING 0
-+#define CONFIG_SEC_LEGACY_PAIRING 1
- 
- // <q> Allow LESC Pairing
- // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
---- Source/Configuration/sr3_config_nrf52832_pca20023.h
-+++ Source/Configuration/sr3_config_nrf52832_pca20023.h
-@@ -818,7 +818,7 @@
- // <e> Enable LED Support
- // <i> Enable the LED signaling subsystem.
- /**@brief Enable LED Support */
--#define CONFIG_LED_ENABLED 0
-+#define CONFIG_LED_ENABLED 1
- 
- // <o> LED Flip Interval [ms] <10-1000>
- // <i> Time between each on/off switching of the LED.
-@@ -904,7 +904,7 @@
- // <i> Specify how many times the LED will blink.
- // <i> If set to 0, the LED will blink until cleared by another event.
- /**@brief LED: Signal Connection Establishment - Number of LED Blinks <0-127> */
--#define CONFIG_LED_CONNECTION_FLASHES 1
-+#define CONFIG_LED_CONNECTION_FLASHES 2
- 
- // <o.0> Use LED 1
- // <o.1> Use LED 2
---- Source/Configuration/sr3_config_nrf52832_pca20023.h
-+++ Source/Configuration/sr3_config_nrf52832_pca20023.h
-@@ -1713,7 +1719,7 @@
- // <q> Allow Legacy Pairing
- // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
- /**@brief Allow Legacy Pairing */
--#define CONFIG_SEC_LEGACY_PAIRING 1
-+#define CONFIG_SEC_LEGACY_PAIRING 0
- 
- // <q> Allow LESC Pairing
- // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.

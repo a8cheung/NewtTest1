@@ -605,6 +605,22 @@ mergeflash:
 dfu:
 	nrfutil pkg generate --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 0 --hw-version 0x20023 --sd-req 0xA5 --key-file private-key.pem dfu-app.zip
 
+flash:
+	nrfutil settings generate --family NRF52 --application $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --application-version 3 --bootloader-version 2 --bl-settings-version 1 settings.hex
+	nrfjprog -f nrf52 --program settings.hex --sectorerase
+	nrfjprog -f nrf52 --program $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex --sectorerase
+	nrfjprog -f nrf52 --reset
+
+merge:
+	mergehex -m $(OUTPUT_DIRECTORY)/PCA20023-SR3_nRF52832_Product_Example.hex settings.hex ../../Bootloader_nRF52832/armgcc/_build/PCA20023-SR3_nRF52832_Product_Example_Bootloader.hex -o remote_fw1.hex
+	mergehex -m remote_fw1.hex ../../../../../../../SoftDevices/nRF52832/s132_nrf52_5.1.0_softdevice.hex -o remote_fw.hex
+	rm remote_fw1.hex
+	@echo Merged all hex file to one file remote_fw.hex
+
+mergeflash:
+	nrfjprog -f nrf52 --program remote_fw.hex --sectorerase
+	nrfjprog -f nrf52 --reset
+
 erase:
 	nrfjprog -f nrf52 --eraseall
 

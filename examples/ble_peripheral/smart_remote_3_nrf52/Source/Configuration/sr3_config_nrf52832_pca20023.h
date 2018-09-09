@@ -50,7 +50,7 @@
 #ifndef _SR3_CONFIG_BOARD_H
 #define _SR3_CONFIG_BOARD_H
 
-#define NEWT_DEV_BOARD 0
+#define NEWT_DEV_BOARD 1
 
 // <<< Use Configuration Wizard in Context Menu >>>
 
@@ -1713,7 +1713,7 @@
 // <q> Allow Legacy Pairing
 // <i> Allow for Legacy pairing. Refer to Bluetooth specification document for details.
 /**@brief Allow Legacy Pairing */
-#define CONFIG_SEC_LEGACY_PAIRING 1
+#define CONFIG_SEC_LEGACY_PAIRING 0
 
 // <q> Allow LESC Pairing
 // <i> Allow for Low Energy Secure Connections pairing. Refer to Bluetooth specification document for details.
